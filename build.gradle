@@ -1,6 +1,14 @@
+plugins{
+    id 'java'
+    id 'maven-publish'
+}
+
 allprojects{
     apply plugin: 'java'
     apply plugin: 'maven-publish'
+
+    group = 'com.github.GlennFolker'
+    version = mindustryVersion
 
     ext{
         compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_19.ordinal() + 19
@@ -24,9 +32,6 @@ allprojects{
 }
 
 configure([project(':downgrader'), project(':entity')]){
-    group = 'com.github.GlennFolker'
-    version = mindustryVersion
-
     tasks.register('sourcesJar', Jar){
         dependsOn classes
 
@@ -54,8 +59,17 @@ configure([project(':downgrader'), project(':entity')]){
         }
     }
 
-    javadoc{
-        options.encoding = 'UTF-8'
+    tasks.withType(Javadoc).configureEach{
+        options{
+            encoding = 'UTF-8'
+            addStringOption('Xdoclint:none', '-quiet')
+
+            addMultilineStringsOption('-add-exports').setValue(project['org.gradle.jvmargs']
+                .split('\\s+')
+                .findAll{it.startsWith('--add-exports')}
+                .collect{it.substring('--add-exports='.length())}
+            )
+        }
     }
 
     sourceCompatibility = compilerVersion
