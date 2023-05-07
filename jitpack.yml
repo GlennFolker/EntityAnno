@@ -1,6 +1,8 @@
 jdk:
   - openjdk19
 before_install:
+  - apt-get --version
+  - apt-get remove openjdk-8-jdk openjdk-10-jdk openjdk-11-jdk openjdk-12-jdk openjdk-13-jdk
   - sdk install java 19.0.2-tem
   - sdk use java 19.0.2-tem
 install:
