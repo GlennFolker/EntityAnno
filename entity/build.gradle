@@ -1,0 +1,12 @@
+sourceSets.main{
+    java.srcDirs = ['src/']
+    resources.srcDirs = ['assets/']
+}
+
+dependencies{
+    annotationProcessor project(':downgrader')
+
+    implementation mindustry(':core')
+    implementation arc(':arc-core')
+    implementation "com.squareup:javapoet:$javapoetVersion"
+}

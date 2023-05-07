@@ -1,0 +1,6 @@
+if(JavaVersion.current().ordinal() < JavaVersion.VERSION_19.ordinal()){
+    throw new GradleException("JDK 19 is a required minimum version. Yours: ${System.getProperty('java.version')}")
+}
+
+include ':downgrader'
+include ':entity'

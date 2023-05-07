@@ -1,0 +1,73 @@
+allprojects{
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+
+    ext{
+        compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_19.ordinal() + 19
+
+        arc = {String module ->
+            return "com.github.Anuken.Arc$module:$arcVersion"
+        }
+
+        mindustry = {String module ->
+            return "com.github.Anuken.MindustryJitpack$module:$mindustryVersion"
+        }
+    }
+
+    repositories{
+        google()
+        mavenCentral()
+        maven{url 'https://oss.sonatype.org/content/repositories/snapshots/'}
+        maven{url 'https://oss.sonatype.org/content/repositories/releases/'}
+        maven{url 'https://jitpack.io'}
+    }
+}
+
+configure([project(':downgrader'), project(':entity')]){
+    group = 'com.github.GlennFolker'
+    version = mindustryVersion
+
+    tasks.register('sourcesJar', Jar){
+        dependsOn classes
+
+        archiveClassifier = 'sources'
+        from sourceSets.main.allSource
+    }
+
+    artifacts{
+        archives sourcesJar
+    }
+
+    java{
+        withJavadocJar()
+        withSourcesJar()
+        toolchain{
+            languageVersion = JavaLanguageVersion.of(compilerVersion)
+        }
+    }
+
+    publishing{
+        publications{
+            maven(MavenPublication){
+                from components.java
+            }
+        }
+    }
+
+    javadoc{
+        options.encoding = 'UTF-8'
+    }
+
+    sourceCompatibility = compilerVersion
+    tasks.withType(JavaCompile).configureEach{
+        options.incremental = true
+        options.encoding = 'UTF-8'
+
+        sourceCompatibility = compilerVersion
+        targetCompatibility = 8
+
+        doFirst{
+            sourceCompatibility = 8
+        }
+    }
+}
