@@ -2,4 +2,7 @@ before_install:
   - sdk install java 19.0.2-tem
   - sdk use java 19.0.2-tem
 install:
+  - export JAVA_HOME=/home/jitpack/.sdkman/candidates/java/19.0.2-tem
   - ./gradlew publishToMavenLocal --info
+env:
+  JAVA_HOME: /home/jitpack/.sdkman/candidates/java/19.0.2-tem
