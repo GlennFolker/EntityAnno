@@ -36,7 +36,7 @@ configure([project(':downgrader'), project(':entity')]){
         dependsOn classes
 
         archiveClassifier = 'sources'
-        from sourceSets.main.allSource
+        from sourceSets.main.allJava
     }
 
     artifacts{
@@ -62,12 +62,12 @@ configure([project(':downgrader'), project(':entity')]){
     tasks.withType(Javadoc).configureEach{
         options{
             encoding = 'UTF-8'
-            addStringOption('Xdoclint:none', '-quiet')
 
-            addMultilineStringsOption('-add-exports').setValue(project['org.gradle.jvmargs']
+            addStringOption('Xdoclint:none', '-quiet')
+            addMultilineStringsOption('-add-exports').setValue((project['org.gradle.jvmargs'] as String)
                 .split('\\s+')
-                .findAll{it.startsWith('--add-exports')}
-                .collect{it.substring('--add-exports='.length())}
+                .findAll{it.startsWith('--add-opens')}
+                .collect{it.substring('--add-opens='.length())}
             )
         }
     }

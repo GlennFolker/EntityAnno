@@ -2,5 +2,5 @@ before_install:
   - sdk install java 19.0.2-tem
   - sdk use java 19.0.2-tem
 install:
-  - ./gradlew publishToMavenLocal --info
+  - ./gradlew downgrader:publishToMavenLocal entity:publishToMavenLocal
   - echo -n > gradle.properties
