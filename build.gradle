@@ -1,9 +1,21 @@
 plugins{
-    id 'java'
+    id 'java-gradle-plugin'
     id 'maven-publish'
 }
 
-allprojects{
+sourceSets.main.java.srcDirs = ['src/']
+
+gradlePlugin{
+    plugins{
+        entityAnno{
+            id = 'com.github.GlennFolker.EntityAnno'
+            displayName = 'EntityAnno'
+            implementationClass = 'ent.EntityAnnoPlugin'
+        }
+    }
+}
+
+configure(allprojects){
     apply plugin: 'java'
     apply plugin: 'maven-publish'
 
@@ -11,7 +23,7 @@ allprojects{
     version = mindustryVersion
 
     ext{
-        compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_19.ordinal() + 19
+        compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17
 
         arc = {String module ->
             return "com.github.Anuken.Arc$module:$arcVersion"
@@ -29,19 +41,6 @@ allprojects{
         maven{url 'https://oss.sonatype.org/content/repositories/releases/'}
         maven{url 'https://jitpack.io'}
     }
-}
-
-configure([project(':downgrader'), project(':entity')]){
-    tasks.register('sourcesJar', Jar){
-        dependsOn classes
-
-        archiveClassifier = 'sources'
-        from sourceSets.main.allJava
-    }
-
-    artifacts{
-        archives sourcesJar
-    }
 
     java{
         withJavadocJar()
@@ -51,12 +50,8 @@ configure([project(':downgrader'), project(':entity')]){
         }
     }
 
-    publishing{
-        publications{
-            maven(MavenPublication){
-                from components.java
-            }
-        }
+    artifacts{
+        archives tasks.sourcesJar
     }
 
     tasks.withType(Javadoc).configureEach{
@@ -84,4 +79,22 @@ configure([project(':downgrader'), project(':entity')]){
             sourceCompatibility = 8
         }
     }
+}
+
+configure([project(':downgrader'), project(':entity')]){
+    publishing{
+        publications{
+            maven(MavenPublication){
+                from components.java
+            }
+        }
+    }
+}
+
+dependencies{
+    annotationProcessor project(':downgrader')
+
+    implementation arc(':arc-core')
+    implementation "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:$kotlinVersion"
+    implementation "org.jetbrains.kotlin.kapt:org.jetbrains.kotlin.kapt.gradle.plugin:$kotlinVersion"
 }

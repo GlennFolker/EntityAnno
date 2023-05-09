@@ -12,19 +12,16 @@ import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.model.*;
 import com.sun.tools.javac.processing.*;
 import com.sun.tools.javac.tree.*;
-import com.sun.tools.javac.util.*;
 import mindustry.*;
 
 import javax.annotation.processing.*;
 import javax.lang.model.*;
 import javax.lang.model.element.*;
 import javax.lang.model.type.*;
-import javax.tools.*;
 import javax.tools.Diagnostic.*;
 import java.io.*;
 import java.lang.annotation.*;
 import java.util.*;
-import java.util.List;
 import java.util.regex.*;
 
 /**
@@ -33,11 +30,11 @@ import java.util.regex.*;
  */
 @SuppressWarnings({"unused", "unchecked"})
 public abstract class BaseProcessor implements Processor{
-    public static final Pattern genStrip = Pattern.compile("unity\\.gen\\.[^A-Z]*");
-
     private static final ObjectMap<Element, ObjectMap<Class<? extends Annotation>, Annotation>> annotations = new ObjectMap<>();
 
+    public String modName;
     public String packageRoot;
+    public String packageFetch;
 
     public Filer filer;
     public Messager messager;
@@ -53,6 +50,8 @@ public abstract class BaseProcessor implements Processor{
     protected int round = 0, rounds = 1;
     protected long initTime;
 
+    protected static Pattern genStrip;
+
     static{
         Vars.loadLogger();
     }
@@ -60,12 +59,24 @@ public abstract class BaseProcessor implements Processor{
     @Override
     public synchronized void init(ProcessingEnvironment env){
         procEnv = (JavacProcessingEnvironment)env;
-        Context context = procEnv.getContext();
+        var context = procEnv.getContext();
+
+        modName = env.getOptions().get("modName");
+        if(modName == null){
+            throw new IllegalStateException("`modName` not supplied!");
+        }
 
         packageRoot = env.getOptions().get("rootPackage");
         if(packageRoot == null){
             throw new IllegalStateException("`rootPackage` not supplied!");
         }
+
+        packageFetch = env.getOptions().get("fetchPackage");
+        if(packageFetch == null){
+            throw new IllegalStateException("`fetchPackage` not supplied!");
+        }
+
+        genStrip = Pattern.compile(packageRoot.replace(".", "\\.") + "\\.[^A-Z]*");
 
         filer = procEnv.getFiler();
         messager = procEnv.getMessager();
@@ -101,7 +112,7 @@ public abstract class BaseProcessor implements Processor{
         builder.methodSpecs.sort(Structs.comparing(MethodSpec::toString));
         builder.fieldSpecs.sort(Structs.comparing(f -> f.name));
 
-        JavaFile file = JavaFile.builder(packageRoot + "." + packageName, builder.build())
+        var file = JavaFile.builder(packageRoot + "." + packageName, builder.build())
             .indent("    ")
             .skipJavaLangImports(true)
             .build();
@@ -112,7 +123,7 @@ public abstract class BaseProcessor implements Processor{
             imports = imports.map(m -> Seq.with(m.split("\n")).sort().toString("\n"));
             imports.sort().distinct();
 
-            String rawSource = file.toString();
+            var rawSource = file.toString();
             Seq<String> result = new Seq<>();
             for(String s : rawSource.split("\n", -1)){
                 result.add(s);
@@ -122,8 +133,8 @@ public abstract class BaseProcessor implements Processor{
                 }
             }
 
-            JavaFileObject object = filer.createSourceFile(file.packageName + "." + file.typeSpec.name, file.typeSpec.originatingElements.toArray(new Element[0]));
-            Writer stream = object.openWriter();
+            var object = filer.createSourceFile(file.packageName + "." + file.typeSpec.name, file.typeSpec.originatingElements.toArray(new Element[0]));
+            var stream = object.openWriter();
             stream.write(result.toString("\n"));
             stream.close();
         }
@@ -150,8 +161,8 @@ public abstract class BaseProcessor implements Processor{
     }
 
     public boolean instanceOf(String type, String other){
-        ClassSymbol a = elements.getTypeElement(type);
-        ClassSymbol b = elements.getTypeElement(other);
+        var a = elements.getTypeElement(type);
+        var b = elements.getTypeElement(other);
         return a != null && b != null && types.isSubtype(a.type, b.type);
     }
 
@@ -210,23 +221,16 @@ public abstract class BaseProcessor implements Processor{
 
     public static <T extends Annotation> T anno(Element e, Class<T> type){
         if(annotations.containsKey(e)){
-            return (T)annotations.get(e).get(type, () -> createAnno(e, type));
+            return (T)annotations.get(e).get(type, () -> e.getAnnotation(type));
         }else{
             ObjectMap<Class<? extends Annotation>, Annotation> map;
             annotations.put(e, map = new ObjectMap<>());
 
             T anno;
-            map.put(type, anno = createAnno(e, type));
+            map.put(type, anno = e.getAnnotation(type));
 
             return anno;
         }
-    }
-
-    private static <T extends Annotation> T createAnno(Element e, Class<T> type){
-        return AnnotationProxyMaker.generateAnnotation(Reflect.invoke(
-            AnnoConstruct.class, e, "getAttribute",
-            new Object[]{type}, Class.class
-        ), type);
     }
 
     public static ClassName spec(Class<?> type){
@@ -330,10 +334,10 @@ public abstract class BaseProcessor implements Processor{
     }
 
     public String sigName(ExecutableElement e){
-        List<? extends VariableElement> params = e.getParameters();
+        var params = e.getParameters();
         if(params.size() == 0) return name(e) + "()";
 
-        StringBuilder builder = new StringBuilder(name(e))
+        var builder = new StringBuilder(name(e))
             .append("(")
             .append(params.get(0).asType());
 
@@ -342,7 +346,7 @@ public abstract class BaseProcessor implements Processor{
     }
 
     public static String fixName(String canonical){
-        Matcher matcher = genStrip.matcher(canonical);
+        var matcher = genStrip.matcher(canonical);
         if(matcher.find() && matcher.start() == 0){
             return canonical.substring(matcher.end());
         }else{
@@ -357,7 +361,7 @@ public abstract class BaseProcessor implements Processor{
 
     @Override
     public SourceVersion getSupportedSourceVersion(){
-        return SourceVersion.RELEASE_19;
+        return SourceVersion.RELEASE_17;
     }
 
     @Override
@@ -367,6 +371,10 @@ public abstract class BaseProcessor implements Processor{
 
     @Override
     public Set<String> getSupportedOptions(){
-        return Collections.singleton("rootPackage");
+        return Set.of(
+            "modName",
+            "rootPackage",
+            "fetchPackage"
+        );
     }
 }

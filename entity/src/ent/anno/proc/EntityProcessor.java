@@ -82,9 +82,9 @@ public class EntityProcessor extends BaseProcessor{
     public synchronized void init(ProcessingEnvironment env){
         super.init(env);
 
-        String dir = env.getOptions().get("revisionDirectory");
+        var dir = env.getOptions().get("revisionDir");
         if(dir == null){
-            throw new IllegalStateException("`revisionDirectory` not supplied!");
+            throw new IllegalStateException("`revisionDir` not supplied!");
         }
 
         revDir = Fi.get(dir);
@@ -676,12 +676,12 @@ public class EntityProcessor extends BaseProcessor{
 
                     MethodSpec.Builder creator = MethodSpec.methodBuilder("create")
                         .addModifiers(PUBLIC, STATIC)
-                        .returns(ClassName.get(packageName, name));
+                        .returns(ClassName.get(packageRoot + "." + packageName, name));
 
                     if(defAnno.pooled()){
-                        creator.addStatement("return $T.obtain($T.class, $T::new)", spec(Pools.class), ClassName.get(packageName, name), ClassName.get(packageName, name));
+                        creator.addStatement("return $T.obtain($T.class, $T::new)", spec(Pools.class), ClassName.get(packageRoot + "." + packageName, name), ClassName.get(packageRoot + "." + packageName, name));
                     }else{
-                        creator.addStatement("return new $T()", ClassName.get(packageName, name));
+                        creator.addStatement("return new $T()", ClassName.get(packageRoot + "." + packageName, name));
                     }
 
                     builder
@@ -771,9 +771,9 @@ public class EntityProcessor extends BaseProcessor{
                             .addParameter(paramSpec(spec(Func.class), spec(String.class), subSpec(tvSpec("T"))), "create")
                             .beginControlFlow("if(type.getName().startsWith($S))", "mindustry.gen.")
                                 .addStatement("var prov = $T.find($T.idMap, p -> p.get().getClass().equals(type))", spec(Structs.class), spec(EntityMapping.class))
-                                .addStatement("$T.nameMap.put($S + name, prov)", spec(EntityMapping.class), "unity-")
+                                .addStatement("$T.nameMap.put($S + name, prov)", spec(EntityMapping.class), modName + "-")
                             .nextControlFlow("else")
-                                .addStatement("$T.nameMap.put($S + name, get(type))", spec(EntityMapping.class), "unity-")
+                                .addStatement("$T.nameMap.put($S + name, get(type))", spec(EntityMapping.class), modName + "-")
                             .endControlFlow()
                             .addStatement("return create.get(name)")
                         .build()
@@ -798,7 +798,7 @@ public class EntityProcessor extends BaseProcessor{
                 for(EntityDefinition def : definitions){
                     imports.clear();
 
-                    ClassName name = ClassName.get(packageName, def.name);
+                    ClassName name = ClassName.get(packageRoot + "." + packageName, def.name);
                     register.addStatement("register($S, $T.class, $T::new)", name.canonicalName(), name, name);
 
                     def.builder.addMethod(
@@ -806,7 +806,7 @@ public class EntityProcessor extends BaseProcessor{
                             .addModifiers(PUBLIC)
                             .addAnnotation(spec(Override.class))
                             .returns(TypeName.INT)
-                            .addStatement("return $T.getID($T.class)", ClassName.get(packageName, "EntityRegistry"), name)
+                            .addStatement("return $T.getID($T.class)", ClassName.get(packageRoot + "." + packageName, "EntityRegistry"), name)
                         .build()
                     );
 
@@ -1088,7 +1088,7 @@ public class EntityProcessor extends BaseProcessor{
 
     protected ClassName procName(ClassSymbol comp, Func<ClassSymbol, String> name){
         return ClassName.get(
-            comp.packge().toString().contains("fetched") ? "mindustry.gen" : packageName,
+            comp.packge().toString().contains(packageFetch) ? "mindustry.gen" : (packageRoot + "." + packageName),
             name.get(comp)
         );
     }
@@ -1114,7 +1114,9 @@ public class EntityProcessor extends BaseProcessor{
 
     @Override
     public Set<String> getSupportedOptions(){
-        return Set.of("revisionDirectory");
+        var opts = new HashSet<>(super.getSupportedOptions());
+        opts.add("revisionDir");
+        return Collections.unmodifiableSet(opts);
     }
 
     public static class EntityDefinition{
