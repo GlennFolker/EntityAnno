@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.*;
  */
 @SuppressWarnings("unused")
 public class EntityAnnoPlugin implements Plugin<Project>{
-    public static final String mindustryVersion = "v143.1";
+    public static final String defMindustryVersion = "v143.1";
     public static final int version = 0;
 
     @Override
@@ -42,6 +42,7 @@ public class EntityAnnoPlugin implements Plugin<Project>{
 
         // Add the `entityAnno{}` extension
         var ext = exts.create("entityAnno", EntityAnnoExtension.class);
+        ext.getMindustryVersion().convention(defMindustryVersion);
 
         tasks.create("procComps", t -> t.doFirst(tt -> {
             var fetchPackage = ext.getFetchPackage().get();
@@ -56,9 +57,10 @@ public class EntityAnnoPlugin implements Plugin<Project>{
             fetchDir.mkdirs();
 
             var amount = new AtomicInteger(0);
+            var propVersion = ext.getMindustryVersion().get();
 
             ObjectSet<UnsafeRunnable> fetches = new ObjectSet<>();
-            Http.get("https://api.github.com/repos/Anuken/MindustryJitpack/contents/core/src/mindustry/entities/comp?ref=" + mindustryVersion)
+            Http.get("https://api.github.com/repos/Anuken/MindustryJitpack/contents/core/src/mindustry/entities/comp?ref=" + propVersion)
                 .timeout(0)
                 .error(e -> { throw new RuntimeException(e); })
                 .block(res -> {
@@ -117,25 +119,8 @@ public class EntityAnnoPlugin implements Plugin<Project>{
             int count = amount.get();
             if(count != 0) throw new IllegalStateException("Couldn't write all components, found " + count + " unwritten.");
 
-            fetchTemp.writeString(mindustryVersion + "/" + version);
+            fetchTemp.writeString(propVersion + "/" + version);
         }));
-
-        // Fetch components first.
-        for(var task : tasks.withType(JavaCompile.class)){
-            if(!fetchDir.exists() || !fetchTemp.exists()){
-                task.dependsOn(fetchComps);
-                task.mustRunAfter(fetchComps);
-            }else{
-                var content = fetchTemp.readString().split("/");
-                var ver = content[0].strip();
-                var rev = content[1].strip();
-
-                if(!ver.equals(mindustryVersion) || !rev.equals(String.valueOf(version))){
-                    task.dependsOn(fetchComps);
-                    task.mustRunAfter(fetchComps);
-                }
-            }
-        }
 
         project.afterEvaluate(p -> {
             // Configure KAPT extension.
@@ -154,6 +139,24 @@ public class EntityAnnoPlugin implements Plugin<Project>{
                     ext.getFetchPackage().get().replace('.', '/') + "/**",
                     ext.getGenSrcPackage().get().replace('.', '/') + "/**"
                 );
+            }
+
+            // Fetch components first.
+            var propVersion = ext.getMindustryVersion().get();
+            for(var task : tasks.withType(JavaCompile.class)){
+                if(!fetchDir.exists() || !fetchTemp.exists()){
+                    task.dependsOn(fetchComps);
+                    task.mustRunAfter(fetchComps);
+                }else{
+                    var content = fetchTemp.readString().split("/");
+                    var ver = content[0].strip();
+                    var rev = content[1].strip();
+
+                    if(!ver.equals(propVersion) || !rev.equals(String.valueOf(version))){
+                        task.dependsOn(fetchComps);
+                        task.mustRunAfter(fetchComps);
+                    }
+                }
             }
 
             // Add annotation processor options.

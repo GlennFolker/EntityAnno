@@ -11,6 +11,8 @@ import java.io.*;
 public interface EntityAnnoExtension{
     /** @return The mod's internal name. */
     Property<String> getModName();
+    /** @return Mindustry entity classes version override. Might be unsafe to use improperly. Optional. */
+    Property<String> getMindustryVersion();
 
     /** @return The location to store entity revision data. */
     Property<File> getRevisionDir();
