@@ -51,7 +51,7 @@ public final class Downgrader extends AbstractProcessor{
 
     @Override
     public SourceVersion getSupportedSourceVersion(){
-        return SourceVersion.RELEASE_19;
+        return SourceVersion.RELEASE_17;
     }
 
     @Override
