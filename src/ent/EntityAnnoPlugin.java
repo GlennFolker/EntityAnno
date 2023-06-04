@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.*;
  */
 @SuppressWarnings("unused")
 public class EntityAnnoPlugin implements Plugin<Project>{
-    public static final String defMindustryVersion = "v143.1";
+    public static final String defMindustryVersion = "v144.3";
     public static final int version = 0;
 
     @Override
@@ -162,7 +162,7 @@ public class EntityAnnoPlugin implements Plugin<Project>{
             // Add annotation processor options.
             kaptExt.arguments(args -> {
                 args.arg("modName", ext.getModName().get());
-                args.arg("rootPackage", ext.getRootPackage().get());
+                args.arg("genPackage", ext.getGenPackage().get());
                 args.arg("fetchPackage", ext.getFetchPackage().get());
                 args.arg("revisionDir", ext.getRevisionDir().get().getAbsolutePath());
                 return null;

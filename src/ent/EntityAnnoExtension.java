@@ -22,5 +22,5 @@ public interface EntityAnnoExtension{
     /** @return Package name for "origin" component classes, typically {@code modname.entities.comp}. Excluded in the JAR. */
     Property<String> getGenSrcPackage();
     /** @return Package name for root generated package, typically {@code modname.gen}. */
-    Property<String> getRootPackage();
+    Property<String> getGenPackage();
 }

@@ -33,7 +33,7 @@ public abstract class BaseProcessor implements Processor{
     private static final ObjectMap<Element, ObjectMap<Class<? extends Annotation>, Annotation>> annotations = new ObjectMap<>();
 
     public String modName;
-    public String packageRoot;
+    public String packageName;
     public String packageFetch;
 
     public Filer filer;
@@ -66,9 +66,9 @@ public abstract class BaseProcessor implements Processor{
             throw new IllegalStateException("`modName` not supplied!");
         }
 
-        packageRoot = env.getOptions().get("rootPackage");
-        if(packageRoot == null){
-            throw new IllegalStateException("`rootPackage` not supplied!");
+        packageName = env.getOptions().get("genPackage");
+        if(packageName == null){
+            throw new IllegalStateException("`genPackage` not supplied!");
         }
 
         packageFetch = env.getOptions().get("fetchPackage");
@@ -76,7 +76,7 @@ public abstract class BaseProcessor implements Processor{
             throw new IllegalStateException("`fetchPackage` not supplied!");
         }
 
-        genStrip = Pattern.compile(packageRoot.replace(".", "\\.") + "\\.[^A-Z]*");
+        genStrip = Pattern.compile(packageName.replace(".", "\\.") + "\\.[^A-Z]*");
 
         filer = procEnv.getFiler();
         messager = procEnv.getMessager();
@@ -107,12 +107,12 @@ public abstract class BaseProcessor implements Processor{
 
     protected void process() throws IOException{}
 
-    protected void write(String packageName, TypeSpec.Builder builder, Seq<String> imports) throws IOException{
+    protected void write(TypeSpec.Builder builder, Seq<String> imports) throws IOException{
         builder.superinterfaces.sort(Structs.comparing(TypeName::toString));
         builder.methodSpecs.sort(Structs.comparing(MethodSpec::toString));
         builder.fieldSpecs.sort(Structs.comparing(f -> f.name));
 
-        var file = JavaFile.builder(packageRoot + "." + packageName, builder.build())
+        var file = JavaFile.builder(packageName, builder.build())
             .indent("    ")
             .skipJavaLangImports(true)
             .build();

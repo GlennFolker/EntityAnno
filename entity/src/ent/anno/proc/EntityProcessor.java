@@ -34,8 +34,6 @@ import static javax.lang.model.type.TypeKind.*;
  * @author Anuke
  */
 public class EntityProcessor extends BaseProcessor{
-    public static final String packageName = "entities";
-
     private static final Seq<MethodSymbol> tmpMethods = new Seq<>();
     private static final Seq<Object> tmpArgs = new Seq<>();
     private static final Comparator<MethodSymbol> methodSorter = Structs.comps(Structs.comparingInt(m -> {
@@ -233,7 +231,7 @@ public class EntityProcessor extends BaseProcessor{
                             }
                         }
 
-                        write(packageName, intBuilder, imports.get(comp));
+                        write(intBuilder, imports.get(comp));
                         if(compAnno.base()){
                             Seq<ClassSymbol> baseDeps = deps.copy().add(comp);
                             baseDependencies.get(comp, ObjectSet::new).addAll(baseDeps);
@@ -676,12 +674,12 @@ public class EntityProcessor extends BaseProcessor{
 
                     MethodSpec.Builder creator = MethodSpec.methodBuilder("create")
                         .addModifiers(PUBLIC, STATIC)
-                        .returns(ClassName.get(packageRoot + "." + packageName, name));
+                        .returns(ClassName.get(packageName, name));
 
                     if(defAnno.pooled()){
-                        creator.addStatement("return $T.obtain($T.class, $T::new)", spec(Pools.class), ClassName.get(packageRoot + "." + packageName, name), ClassName.get(packageRoot + "." + packageName, name));
+                        creator.addStatement("return $T.obtain($T.class, $T::new)", spec(Pools.class), ClassName.get(packageName, name), ClassName.get(packageName, name));
                     }else{
-                        creator.addStatement("return new $T()", ClassName.get(packageRoot + "." + packageName, name));
+                        creator.addStatement("return new $T()", ClassName.get(packageName, name));
                     }
 
                     builder
@@ -798,7 +796,7 @@ public class EntityProcessor extends BaseProcessor{
                 for(EntityDefinition def : definitions){
                     imports.clear();
 
-                    ClassName name = ClassName.get(packageRoot + "." + packageName, def.name);
+                    ClassName name = ClassName.get(packageName, def.name);
                     register.addStatement("register($S, $T.class, $T::new)", name.canonicalName(), name, name);
 
                     def.builder.addMethod(
@@ -806,7 +804,7 @@ public class EntityProcessor extends BaseProcessor{
                             .addModifiers(PUBLIC)
                             .addAnnotation(spec(Override.class))
                             .returns(TypeName.INT)
-                            .addStatement("return $T.getID($T.class)", ClassName.get(packageRoot + "." + packageName, "EntityRegistry"), name)
+                            .addStatement("return $T.getID($T.class)", ClassName.get(packageName, "EntityRegistry"), name)
                         .build()
                     );
 
@@ -894,17 +892,17 @@ public class EntityProcessor extends BaseProcessor{
                         }
                     }
 
-                    write(packageName, def.builder, imports);
+                    write(def.builder, imports);
                 }
 
                 for(TypeSpec.Builder base : baseClasses.values()){
                     imports.clear();
                     for(ClassSymbol dep : baseDependencies.get(comp(Reflect.get(base, "name") + "Comp"))) imports.addAll(this.imports.get(dep));
 
-                    write(packageName, base, imports);
+                    write(base, imports);
                 }
 
-                write(packageName, registry.addMethod(register.build()), null);
+                write(registry.addMethod(register.build()), null);
             }
         }
     }
@@ -1088,7 +1086,7 @@ public class EntityProcessor extends BaseProcessor{
 
     protected ClassName procName(ClassSymbol comp, Func<ClassSymbol, String> name){
         return ClassName.get(
-            comp.packge().toString().contains(packageFetch) ? "mindustry.gen" : (packageRoot + "." + packageName),
+            comp.packge().toString().contains(packageFetch) ? "mindustry.gen" : packageName,
             name.get(comp)
         );
     }
