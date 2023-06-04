@@ -147,7 +147,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
     }
     ```
     This will generate `YourEntityComponentUnit` class in the generated package, and you can use it in your `UnitType` as such:
-    ```
+    ```java
     EntityRegistry.content("my-unit", YourEntityComponentUnit.class, name -> new UnitType(name){{
         //...
     }});
