@@ -373,7 +373,7 @@ public abstract class BaseProcessor implements Processor{
     public Set<String> getSupportedOptions(){
         return Set.of(
             "modName",
-            "rootPackage",
+            "genPackage",
             "fetchPackage"
         );
     }
