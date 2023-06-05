@@ -9,6 +9,7 @@ import com.sun.source.tree.*;
 import com.sun.tools.javac.api.*;
 import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.*;
+import com.sun.tools.javac.code.Attribute.Compound;
 import com.sun.tools.javac.model.*;
 import com.sun.tools.javac.processing.*;
 import com.sun.tools.javac.tree.*;
@@ -125,11 +126,11 @@ public abstract class BaseProcessor implements Processor{
 
             var rawSource = file.toString();
             Seq<String> result = new Seq<>();
-            for(String s : rawSource.split("\n", -1)){
+            for(var s : rawSource.split("\n", -1)){
                 result.add(s);
                 if(s.startsWith("package ")){
                     result.add("");
-                    for(String i : imports) result.add(i);
+                    for(var i : imports) result.add(i);
                 }
             }
 
@@ -206,31 +207,36 @@ public abstract class BaseProcessor implements Processor{
     }
 
     public static boolean is(Element e, Modifier... modifiers){
-        Set<Modifier> set = e.getModifiers();
-        for(Modifier modifier : modifiers) if(!set.contains(modifier)) return false;
+        var set = e.getModifiers();
+        for(var modifier : modifiers) if(!set.contains(modifier)) return false;
 
         return true;
     }
 
     public static boolean isAny(Element e, Modifier... modifiers){
-        Set<Modifier> set = e.getModifiers();
-        for(Modifier modifier : modifiers) if(set.contains(modifier)) return true;
+        var set = e.getModifiers();
+        for(var modifier : modifiers) if(set.contains(modifier)) return true;
 
         return false;
     }
 
     public static <T extends Annotation> T anno(Element e, Class<T> type){
         if(annotations.containsKey(e)){
-            return (T)annotations.get(e).get(type, () -> e.getAnnotation(type));
+            return (T)annotations.get(e).get(type, () -> createAnno(e, type));
         }else{
             ObjectMap<Class<? extends Annotation>, Annotation> map;
             annotations.put(e, map = new ObjectMap<>());
 
             T anno;
-            map.put(type, anno = e.getAnnotation(type));
+            map.put(type, anno = createAnno(e, type));
 
             return anno;
         }
+    }
+
+    private static <T extends Annotation> T createAnno(Element e, Class<T> type){
+        Compound compound = Reflect.invoke(AnnoConstruct.class, e, "getAttribute", new Object[]{type}, Class.class);
+        return compound == null ? null : AnnoProxyMaker.generate(compound, type);
     }
 
     public static ClassName spec(Class<?> type){
