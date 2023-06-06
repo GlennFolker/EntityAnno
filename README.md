@@ -80,7 +80,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    }
    ```
    This is to allow compiling with Java 17 syntaxes while targeting Java 8 bytecodes.
-6. Go to `/build.gradle` and remove these lines:
+6. Go to `/build.gradle` and replace these lines:
    ```gradle
    ext{
        //the build number that this mod is made for
@@ -96,6 +96,12 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        }
    }
    ```
+   With these:
+   ```gradle
+   ext{
+       sdkRoot = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
+   }
+   ```
 7. Go to `/build.gradle` and replace these lines:
    ```gradle
    dependencies{
@@ -105,7 +111,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
    }
    ```
-   With these:
+   With these (without the comments, of course):
    ```gradle
    dependencies{
        // i.
