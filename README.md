@@ -1,5 +1,5 @@
 # `EntityAnno`
-Utility tools for generating [Mindustry](https://github.com/Anuken/Mindustry) custom entity component classes.
+Utility tools for generating [`Mindustry`](https://github.com/Anuken/Mindustry) custom entity component classes.
 
 ## Installation
 Note that this only works with Java projects, not Kotlin or Scala or other similar JVM languages. The important bits are as following:
@@ -26,13 +26,13 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    ```properties
    mindustryVersion = v144.3
    arcVersion = v144.3
-   entVersion = v144.3
+   entVersion = 1.0.0
 
    kapt.include.compile.classpath = false
    kotlin.stdlib.default.dependency = false
    ```
-   - You can tweak `mindustryVersion` to any tag/commit you prefer (and have `arcVersion` _exactly_ the same as said Mindustry version uses, done by looking at the `archash` property in Mindustry's `gradle.properties`).
-   - `entVersion` should be left alone, and set to the latest release of _this_ repository (not Mindustry! Exact fetched sources will be dealt with later).
+   - You can tweak `mindustryVersion` to any tag/commit you prefer (and have `arcVersion` _exactly_ the same as said `Mindustry` version uses, done by looking at the `archash` property in `Mindustry`'s `gradle.properties`).
+   - `entVersion` should be left alone, and set to the latest release of _this_ repository (not `Mindustry`! Exact fetched sources will be dealt with later).
    - The KAPT/Kotlin stuff at the bottom is used to decrease compile-time penalty and not use the entire Kotlin JVM standard libraries, because they're literally pointless in this context.
 3. Go to `/gradle.properties`, and in the property `org.gradle.jvmargs`, replace `--add-exports` with `--add-opens` and remove `--illegal-access=permit` so it looks like below:
    ```properties
@@ -127,7 +127,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        kapt "com.github.GlennFolker.EntityAnno:entity:$entVersion"
    }
    ```
-   1. Adds Mindustry and Arc as a compile classpath.
+   1. Adds `Mindustry` and `Arc` as a compile classpath.
    2. Lets you use Java 9+ syntaxes while still targeting Java 8 bytecode (which is necessary), mostly because Java is stupid.
    3. Adds the annotation processor classpath into your project, without bundling them into the final `.jar`.
    4. Registers the annotation processor to the compiler. _Why KAPT?_ Because KAPT is fast and generally friendly to incremental compilation, especially if your project is decoupled into several modules (like [Confictura](https://github.com/GlennFolker/Confictura)).
@@ -154,7 +154,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    }
    ```
    - `modName` is the internal mod name as specified in your `/mod.json`.
-   - `mindustryVersion` is the Mindustry version that you use (`project['mindustryVersion']` refers to the property in `/gradle.properties`, so make sure the property name matches!), so that the annotation processor fetches correct entity component source codes.
+   - `mindustryVersion` is the `Mindustry` version that you use (`project['mindustryVersion']` refers to the property in `/gradle.properties`, so make sure the property name matches!), so that the annotation processor fetches correct entity component source codes.
    - `revisionDir` is used for saves and netcodes history, don't worry about it. Just make sure _not_ to `.gitignore` the folder.
    - `fetchPackage`, `genSrcPackage`, and `genPackage` are respectively the package names for storing downloaded vanilla sources, your entity component sources (that'll be excluded from the final `.jar`), and the resulting generated entity classes. Change `yourmod` to your mod's root package name.
 10. Add the line `EntityRegistry.register();` (from the `genPackage`) in your mod class' `loadContent()` method.
@@ -163,3 +163,8 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
 
 ## Contributing
 This project is licensed under [GNU GPL v3.0](/LICENSE).
+
+## Version Compatibility
+| `Mindustry`/`Arc` | `EntityAnno` |
+| ----------------- | ------------ |
+| `v144.3`          | `1.0.0`      |

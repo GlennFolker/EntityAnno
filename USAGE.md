@@ -1,12 +1,12 @@
 ## Usage
 ### Structure
-In `EntityAnno`, entity class generation is done very similarly like in Mindustry:
+In `EntityAnno`, entity class generation is done very similarly like in `Mindustry`:
 1. Users define `*Comp`onent classes, complete with its owned field and method definitions.
 2. From these `*Comp`onent classes, `*c`omponent interfaces declaring owned field getter/setter and methods are generated.
 3. Users `@EntityDef`ine concrete entity classes that are composed from these components.
 
 ### Example
-One of the most common example of entity class generation is to define `Unit` classes in Mindustry. This can be done with `EntityAnno` as such:
+One of the most common example of entity class generation is to define `Unit` classes in `Mindustry`. This can be done with `EntityAnno` as such:
 ```java
 // mymod/entities/comp/MyComp.java
 package mymod.entities.comp;
