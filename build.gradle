@@ -20,7 +20,7 @@ configure(allprojects){
     apply plugin: 'maven-publish'
 
     group = 'com.github.GlennFolker'
-    version = "$mindustryVersion"
+    version = '1.0.0'
 
     ext{
         compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17

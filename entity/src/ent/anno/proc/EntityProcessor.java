@@ -80,7 +80,7 @@ public class EntityProcessor extends BaseProcessor{
     public synchronized void init(ProcessingEnvironment env){
         super.init(env);
 
-        var dir = env.getOptions().get("revisionDir");
+        String dir = env.getOptions().get("revisionDir");
         if(dir == null){
             throw new IllegalStateException("`revisionDir` not supplied!");
         }
@@ -183,51 +183,51 @@ public class EntityProcessor extends BaseProcessor{
 
                         ObjectSet<String> signatures = new ObjectSet<>();
                         for(Symbol s : comp.getEnclosedElements()){
-                            if(isAny(s, PRIVATE, STATIC)) continue;
-                            if(s.getKind() == METHOD){
-                                MethodSymbol e = (MethodSymbol)s;
+                            if(isAny(s, PRIVATE, STATIC) || s.getKind() != METHOD) continue;
+                            MethodSymbol e = (MethodSymbol)s;
 
-                                signatures.add(sigName(e));
-                                if(anno(e, Override.class) == null){
-                                    MethodSpec.Builder methBuilder = MethodSpec.methodBuilder(name(e))
-                                        .addModifiers(PUBLIC, ABSTRACT)
-                                        .returns(spec(e.getReturnType()));
+                            signatures.add(sigName(e));
+                            if(anno(e, Override.class) == null){
+                                MethodSpec.Builder methBuilder = MethodSpec.methodBuilder(name(e))
+                                    .addModifiers(PUBLIC, ABSTRACT)
+                                    .returns(spec(e.getReturnType()));
 
-                                    for(TypeVariableSymbol t : e.getTypeParameters()) methBuilder.addTypeVariable(spec(t));
-                                    for(Type t : e.getThrownTypes()) methBuilder.addException(spec(t));
-                                    for(VarSymbol v : e.getParameters()) methBuilder.addParameter(spec(v));
-                                    intBuilder.addMethod(methBuilder.build());
-                                }
-                            }else if(s.getKind() == FIELD && anno(s, Import.class) == null){
-                                VarSymbol v = (VarSymbol)s;
-                                String name = name(v);
+                                for(TypeVariableSymbol t : e.getTypeParameters()) methBuilder.addTypeVariable(spec(t));
+                                for(Type t : e.getThrownTypes()) methBuilder.addException(spec(t));
+                                for(VarSymbol v : e.getParameters()) methBuilder.addParameter(spec(v));
+                                intBuilder.addMethod(methBuilder.build());
+                            }
+                        }
+                        for(Symbol s : comp.getEnclosedElements()){
+                            if(isAny(s, PRIVATE, STATIC) || s.getKind() != FIELD || anno(s, Import.class) != null) continue;
+                            VarSymbol v = (VarSymbol)s;
+                            String name = name(v);
 
-                                if(!signatures.contains(name + "()")){
-                                    MethodSpec.Builder getter = MethodSpec.methodBuilder(name)
-                                        .addModifiers(PUBLIC, ABSTRACT)
-                                        .returns(spec(v.type));
+                            if(!signatures.contains(name + "()")){
+                                MethodSpec.Builder getter = MethodSpec.methodBuilder(name)
+                                    .addModifiers(PUBLIC, ABSTRACT)
+                                    .returns(spec(v.type));
 
-                                    for(Compound anno : v.getAnnotationMirrors()){
-                                        String aname = name(anno.type.tsym);
-                                        if(aname.contains("Null") || aname.contains("Deprecated")) getter.addAnnotation(spec((TypeElement)anno.type.tsym));
-                                    }
-
-                                    intBuilder.addMethod(getter.build());
+                                for(Compound anno : v.getAnnotationMirrors()){
+                                    String aname = name(anno.type.tsym);
+                                    if(aname.contains("Null") || aname.contains("Deprecated")) getter.addAnnotation(spec((TypeElement)anno.type.tsym));
                                 }
 
-                                if(!is(v, FINAL) && anno(v, ReadOnly.class) == null && !signatures.contains(name + "(" + v.type + ")")){
-                                    MethodSpec.Builder setter = MethodSpec.methodBuilder(name)
-                                        .addModifiers(PUBLIC, ABSTRACT)
-                                        .returns(TypeName.VOID);
+                                intBuilder.addMethod(getter.build());
+                            }
 
-                                    ParameterSpec.Builder param = ParameterSpec.builder(spec(v.type), name(v));
-                                    for(Compound anno : v.getAnnotationMirrors()){
-                                        String aname = name(anno.type.tsym);
-                                        if(aname.contains("Null") || aname.contains("Deprecated")) param.addAnnotation(spec((TypeElement)anno.type.tsym));
-                                    }
+                            if(!is(v, FINAL) && anno(v, ReadOnly.class) == null && !signatures.contains(name + "(" + v.type + ")")){
+                                MethodSpec.Builder setter = MethodSpec.methodBuilder(name)
+                                    .addModifiers(PUBLIC, ABSTRACT)
+                                    .returns(TypeName.VOID);
 
-                                    intBuilder.addMethod(setter.addParameter(param.build()).build());
+                                ParameterSpec.Builder param = ParameterSpec.builder(spec(v.type), name(v));
+                                for(Compound anno : v.getAnnotationMirrors()){
+                                    String aname = name(anno.type.tsym);
+                                    if(aname.contains("Null") || aname.contains("Deprecated")) param.addAnnotation(spec((TypeElement)anno.type.tsym));
                                 }
+
+                                intBuilder.addMethod(setter.addParameter(param.build()).build());
                             }
                         }
 
@@ -352,10 +352,6 @@ public class EntityProcessor extends BaseProcessor{
 
                     for(ClassSymbol comp : defComps.values()) if(!excludeGroups.contains(comp) && groups.containsKey(comp)) defGroups.add(groups.get(comp));
 
-                    methods.clear();
-                    specVariables.clear();
-                    usedFields.clear();
-
                     TypeSpec.Builder builder = TypeSpec.classBuilder(name)
                         .addModifiers(PUBLIC)
                         .addAnnotation(
@@ -364,11 +360,11 @@ public class EntityProcessor extends BaseProcessor{
                             .build()
                         );
 
-                    if(def instanceof ClassSymbol){
-                        builder.addOriginatingElement(def);
-                    }else{
-                        for(ClassSymbol comp : defComps.values()) builder.addOriginatingElement(comp);
-                    }
+                    for(ClassSymbol comp : defComps.values()) builder.addOriginatingElement(comp);
+
+                    methods.clear();
+                    specVariables.clear();
+                    usedFields.clear();
 
                     syncedFields.clear();
                     allFields.clear();
@@ -455,6 +451,14 @@ public class EntityProcessor extends BaseProcessor{
                         String key = entry.key;
                         Seq<MethodSymbol> entries = entry.value;
 
+                        VarSymbol setter = allFields.find(v -> {
+                            MethodSymbol first = entries.first();
+                            return
+                                name(v).equals(name(first)) &&
+                                first.getParameters().size() == 1 && same(first.getParameters().get(0).type, v.type) &&
+                                first.getReturnType().getKind() == VOID;
+                        });
+
                         MethodSymbol topReplacer = entries.max(m -> {
                             Replace rep = anno(m, Replace.class);
                             return rep == null ? -1 : rep.value();
@@ -462,6 +466,8 @@ public class EntityProcessor extends BaseProcessor{
 
                         Replace topReplace;
                         if(topReplacer != null && (topReplace = anno(topReplacer, Replace.class)) != null){
+                            setter = null;
+
                             int max = topReplace.value();
                             if(topReplacer.getReturnType().getKind() == VOID){
                                 entries.removeAll(m -> {
@@ -485,7 +491,12 @@ public class EntityProcessor extends BaseProcessor{
                             if(rem != null){
                                 if(removal.contains(m)) throw err(sigName(m) + " is already @Remove-d by another method.", def);
 
-                                MethodSymbol removed = entries.find(e -> same(e.enclClass(), type(rem::value)));
+                                ClassSymbol comp = comp(type(rem::value));
+                                if(setter != null && same(setter.enclClass(), comp)){
+                                    setter = null;
+                                }
+
+                                MethodSymbol removed = entries.find(e -> same(e.enclClass(), comp));
                                 if(removed != null) removal.add(removed);
                             }
                         }
@@ -570,7 +581,7 @@ public class EntityProcessor extends BaseProcessor{
                                 for(MethodSymbol e : priorBypass) methBuilder.addStatement("this.$L()", name(e));
                             }
 
-                            append(methBuilder, defComps.values(), bypass, inserts, wraps, writeBlock);
+                            append(methBuilder, defComps.values(), bypass, inserts, wraps, writeBlock, null);
 
                             methBuilder.addStatement("if($Ladded) return", mname.equals("add") ? "" : "!");
                             for(String group : defGroups) methBuilder.addStatement("$T.$L.$L(this)", spec(Groups.class), group, mname);
@@ -601,7 +612,7 @@ public class EntityProcessor extends BaseProcessor{
                             }
 
                             if((mname.equals("readSync") || mname.equals("writeSync"))){
-                                io.writeSync(methBuilder, mname.equals("writeSync"), /*syncedFields,*/ allFields);
+                                io.writeSync(methBuilder, mname.equals("writeSync"), allFields);
                             }
 
                             if((mname.equals("readSyncManual") || mname.equals("writeSyncManual"))){
@@ -631,7 +642,7 @@ public class EntityProcessor extends BaseProcessor{
                             }
                         }
 
-                        append(methBuilder, defComps.values(), entries, inserts, wraps, writeBlock);
+                        append(methBuilder, defComps.values(), entries, inserts, wraps, writeBlock, setter);
 
                         for(MethodSymbol e : standaloneInserts) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
                         if(defAnno.pooled() && mname.equals("remove")) methBuilder.addStatement("$T.queueFree(this)", spec(Groups.class));
@@ -651,7 +662,7 @@ public class EntityProcessor extends BaseProcessor{
                     }
 
                     if(defAnno.pooled()){
-                        builder.addSuperinterface(Poolable.class);
+                        builder.addSuperinterface(spec(Poolable.class));
 
                         MethodSpec.Builder resetBuilder = MethodSpec.methodBuilder("reset")
                             .addModifiers(PUBLIC)
@@ -907,11 +918,42 @@ public class EntityProcessor extends BaseProcessor{
         }
     }
 
-    protected void append(MethodSpec.Builder methBuilder, Iterable<ClassSymbol> defComps, Seq<MethodSymbol> entries, Seq<MethodSymbol> inserts, Seq<MethodSymbol> wraps, boolean writeBlock){
+    protected void append(MethodSpec.Builder methBuilder, Iterable<ClassSymbol> defComps, Seq<MethodSymbol> entries, Seq<MethodSymbol> inserts, Seq<MethodSymbol> wraps, boolean writeBlock, VarSymbol setter){
+        boolean hasSet = false;
         for(MethodSymbol m : entries){
             if(!ext(m, defComps)) continue;
-            String blockName = baseName(m.enclClass()).toLowerCase();
+            if(setter != null && !hasSet && (anno(m, MethodPriority.class) == null || anno(m, MethodPriority.class).value() == 0)){
+                hasSet = true;
+                String blockName = baseName(setter.enclClass()).toLowerCase();
+                Seq<MethodSymbol> wrapComp = tmpMethods.selectFrom(wraps, e -> baseName(comp(type(anno(e, Wrap.class)::block))).toLowerCase().equals(blockName));
 
+                boolean wrapped = !wrapComp.isEmpty();
+                if(wrapped){
+                    StringBuilder format = new StringBuilder("if(this.$L()");
+                    tmpArgs.clear().add(name(wrapComp.first()));
+
+                    for(int i = 1; i < wrapComp.size; i++){
+                        format.append(" && this.$L()");
+                        tmpArgs.add(name(wrapComp.get(i)));
+                    }
+
+                    methBuilder.beginControlFlow(format.append(")").toString(), tmpArgs.toArray());
+                }
+
+                Seq<MethodSymbol> insertComp = tmpMethods.selectFrom(inserts, e -> baseName(comp(type(anno(e, Insert.class)::block))).toLowerCase().equals(blockName));
+                for(MethodSymbol e : insertComp) if(!anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+
+                if(!isAny(m, ABSTRACT, NATIVE)){
+                    if(writeBlock) methBuilder.beginControlFlow("$L:", blockName);
+                    methBuilder.addStatement("this.$L = $L", name(setter), name(setter));
+                    if(writeBlock) methBuilder.endControlFlow();
+                }
+
+                for(MethodSymbol e : insertComp) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+                if(wrapped) methBuilder.endControlFlow();
+            }
+
+            String blockName = baseName(m.enclClass()).toLowerCase();
             Seq<MethodSymbol> wrapComp = tmpMethods.selectFrom(wraps, e -> baseName(comp(type(anno(e, Wrap.class)::block))).toLowerCase().equals(blockName));
 
             boolean wrapped = !wrapComp.isEmpty();
@@ -1112,7 +1154,7 @@ public class EntityProcessor extends BaseProcessor{
 
     @Override
     public Set<String> getSupportedOptions(){
-        var opts = new HashSet<>(super.getSupportedOptions());
+        Set<String> opts = new HashSet<>(super.getSupportedOptions());
         opts.add("revisionDir");
         return Collections.unmodifiableSet(opts);
     }
