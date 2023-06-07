@@ -1,7 +1,7 @@
 # `EntityAnno`
 Utility tools for generating [Mindustry](https://github.com/Anuken/Mindustry) custom entity component classes.
 
-## Usage
+## Installation
 Note that this only works with Java projects, not Kotlin or Scala or other similar JVM languages. The important bits are as following:
 
 0. - Install [JDK 17](https://adoptium.net/temurin/releases/) or above.
@@ -34,7 +34,24 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    - You can tweak `mindustryVersion` to any tag/commit you prefer (and have `arcVersion` _exactly_ the same as said Mindustry version uses, done by looking at the `archash` property in Mindustry's `gradle.properties`).
    - `entVersion` should be left alone, and set to the latest release of _this_ repository (not Mindustry! Exact fetched sources will be dealt with later).
    - The KAPT/Kotlin stuff at the bottom is used to decrease compile-time penalty and not use the entire Kotlin JVM standard libraries, because they're literally pointless in this context.
-3. Go to `/build.gradle` and replace this line:
+3. Go to `/gradle.properties`, and in the property `org.gradle.jvmargs`, replace `--add-exports` with `--add-opens` and remove `--illegal-access=permit` so it looks like below:
+   ```properties
+   org.gradle.jvmargs = \
+   --add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED \
+   --add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED \
+   --add-opens=java.base/sun.reflect.annotation=ALL-UNNAMED
+   ```
+   This is done to grant necessary internal API accesses for the annotation processor.
+4. Go to `/build.gradle` and replace this line:
    ```gradle
    apply plugin: "java"
    ```
@@ -46,7 +63,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    }
    ```
    This is the core part of the usage.
-4. Go to `/build.gradle` and replace these lines:
+5. Go to `/build.gradle` and replace these lines:
    ```gradle
    targetCompatibility = 8
    sourceCompatibility = JavaVersion.VERSION_16
@@ -63,7 +80,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    }
    ```
    This is to allow compiling with Java 17 syntaxes while targeting Java 8 bytecodes.
-5. Go to `/build.gradle` and remove these lines:
+6. Go to `/build.gradle` and replace these lines:
    ```gradle
    ext{
        //the build number that this mod is made for
@@ -79,7 +96,13 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        }
    }
    ```
-6. Go to `/build.gradle` and replace these lines:
+   With these:
+   ```gradle
+   ext{
+       sdkRoot = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
+   }
+   ```
+7. Go to `/build.gradle` and replace these lines:
    ```gradle
    dependencies{
        compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
@@ -88,7 +111,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
    }
    ```
-   With these:
+   With these (without the comments, of course):
    ```gradle
    dependencies{
        // i.
@@ -108,7 +131,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    2. Lets you use Java 9+ syntaxes while still targeting Java 8 bytecode (which is necessary), mostly because Java is stupid.
    3. Adds the annotation processor classpath into your project, without bundling them into the final `.jar`.
    4. Registers the annotation processor to the compiler. _Why KAPT?_ Because KAPT is fast and generally friendly to incremental compilation, especially if your project is decoupled into several modules (like [Confictura](https://github.com/GlennFolker/Confictura)).
-7. Go to `/build.gradle` and remove these lines:
+8. Go to `/build.gradle` and remove these lines:
    ```gradle
    //force arc version
    configurations.all{
@@ -119,7 +142,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        }
    }
    ```
-8. Add this property block in `/build.gradle` wherever you like (as long as it's done in project evaluation, that is):
+9. Add this property block in `/build.gradle` wherever you like (as long as it's done in project evaluation, that is):
    ```gradle
    entityAnno{
        modName = 'your-mod-name'
@@ -134,9 +157,9 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    - `mindustryVersion` is the Mindustry version that you use (`project['mindustryVersion']` refers to the property in `/gradle.properties`, so make sure the property name matches!), so that the annotation processor fetches correct entity component source codes.
    - `revisionDir` is used for saves and netcodes history, don't worry about it. Just make sure _not_ to `.gitignore` the folder.
    - `fetchPackage`, `genSrcPackage`, and `genPackage` are respectively the package names for storing downloaded vanilla sources, your entity component sources (that'll be excluded from the final `.jar`), and the resulting generated entity classes. Change `yourmod` to your mod's root package name.
-9. Add the line `EntityRegistry.register();` (from the `genPackage`) in your mod class' `loadContent()` method.
-11. See [this class](https://github.com/GlennFolker/Entesting/blob/master/src/entesting/entities/comp/TestComp.java) for example entity generation. Refer to [this folder](https://github.com/Anuken/Mindustry/tree/master/core/src/mindustry/entities/comp) in vanilla Mindustry to see more examples of entity generation (points of interests: `UnitComp.java`, `FlyingComp.java`, `BuildingComp.java`).
-12. To generate unit entity classes, create a (private) class somewhere as such:
+10. Add the line `EntityRegistry.register();` (from the `genPackage`) in your mod class' `loadContent()` method.
+11. See [this class](https://github.com/GlennFolker/Entesting/blob/master/src/entesting/entities/comp/TestComp.java) for example entity generation. Refer to [this folder](https://github.com/Anuken/Mindustry/tree/master/core/src/mindustry/entities/comp) in vanilla Mindustry to see more examples of entity generation (points of interests: `UnitComp.java`, `FlyingComp.java`, `BuildingComp.java`). <br>
+    To generate unit entity classes, create a (private) class somewhere as such:
     ```java
     import ent.anno.Annotations.*;
 
@@ -152,7 +175,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
         //...
     }});
     ```
-13. Compile and use the mod as the guide in the mod template says.
+12. Compile and use the mod as the guide in the mod template says.
 
 ## Contributing
 This project is licensed under [GNU GPL v3.0](/LICENSE).
