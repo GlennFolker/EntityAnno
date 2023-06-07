@@ -93,4 +93,4 @@ abstract class MyEntityComp implements Drawc, Rotc{
 ```
 Spawning a `MyEntity` in the world should summon an entity that only draws an "oh no" sprite.
 
-For more features offered by `EntityAnno`, please read the documentations written in `[the `Annotations` file]`(/entity/src/ent/anno/Annotations.java).
+For more features offered by `EntityAnno`, please read the documentations written in [the `Annotations` file](/entity/src/ent/anno/Annotations.java).
