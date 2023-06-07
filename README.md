@@ -158,23 +158,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    - `revisionDir` is used for saves and netcodes history, don't worry about it. Just make sure _not_ to `.gitignore` the folder.
    - `fetchPackage`, `genSrcPackage`, and `genPackage` are respectively the package names for storing downloaded vanilla sources, your entity component sources (that'll be excluded from the final `.jar`), and the resulting generated entity classes. Change `yourmod` to your mod's root package name.
 10. Add the line `EntityRegistry.register();` (from the `genPackage`) in your mod class' `loadContent()` method.
-11. See [this class](https://github.com/GlennFolker/Entesting/blob/master/src/entesting/entities/comp/TestComp.java) for example entity generation. Refer to [this folder](https://github.com/Anuken/Mindustry/tree/master/core/src/mindustry/entities/comp) in vanilla Mindustry to see more examples of entity generation (points of interests: `UnitComp.java`, `FlyingComp.java`, `BuildingComp.java`). <br>
-    To generate unit entity classes, create a (private) class somewhere as such:
-    ```java
-    import ent.anno.Annotations.*;
-
-    import yourmod.gen.entities.*;
-
-    class EntityDefs{
-        @EntityDef({Unitc.class, YourEntityComponentc.class}) Object entityComponentUnit;
-    }
-    ```
-    This will generate `YourEntityComponentUnit` class in the generated package, and you can use it in your `UnitType` as such:
-    ```java
-    EntityRegistry.content("my-unit", YourEntityComponentUnit.class, name -> new UnitType(name){{
-        //...
-    }});
-    ```
+11. Refer to [usage](/USAGE.md) for more detailed entity annotation usages.
 12. Compile and use the mod as the guide in the mod template says.
 
 ## Contributing
