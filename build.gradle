@@ -30,7 +30,7 @@ configure(allprojects){
         }
 
         mindustry = {String module ->
-            return "com.github.Anuken.MindustryJitpack$module:$mindustryVersion"
+            return "com.github.Anuken.Mindustry$module:$mindustryVersion"
         }
     }
 
@@ -39,6 +39,7 @@ configure(allprojects){
         mavenCentral()
         maven{url 'https://oss.sonatype.org/content/repositories/snapshots/'}
         maven{url 'https://oss.sonatype.org/content/repositories/releases/'}
+        maven{url "https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository"}
         maven{url 'https://jitpack.io'}
     }
 
