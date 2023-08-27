@@ -24,8 +24,8 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    This is done so that Gradle can find this plugin, and to enforce usage of Java 17+ for compiling.
 2. Go to `/gradle.properties` and add these lines:
    ```properties
-   mindustryVersion = v144.3
-   arcVersion = v144.3
+   mindustryVersion = v145
+   arcVersion = v145
    entVersion = 1.0.0
 
    kapt.include.compile.classpath = false
@@ -84,7 +84,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    ```gradle
    ext{
        //the build number that this mod is made for
-       mindustryVersion = 'v143.1'
+       mindustryVersion = 'v145'
        jabelVersion = "93fde537c7"
        sdkRoot = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
    }
@@ -106,8 +106,8 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    ```gradle
    dependencies{
        compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
-       compileOnly "com.github.Anuken.MindustryJitpack:core:$mindustryVersion"
-
+       compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
+   
        annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
    }
    ```
@@ -116,7 +116,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    dependencies{
        // i.
        compileOnly "com.github.Anuken.Arc:arc-core:$arcVersion"
-       compileOnly "com.github.Anuken.MindustryJitpack:core:$mindustryVersion"
+       compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
 
        // ii.
        annotationProcessor "com.github.GlennFolker.EntityAnno:downgrader:$entVersion"
