@@ -26,7 +26,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    ```properties
    mindustryVersion = v145
    arcVersion = v145
-   entVersion = 1.1.1
+   entVersion = 1.1.2
 
    kapt.include.compile.classpath = false
    kotlin.stdlib.default.dependency = false
@@ -166,6 +166,6 @@ This project is licensed under [GNU GPL v3.0](/LICENSE).
 
 ## Version Compatibility
 | `Mindustry`/`Arc` | `EntityAnno` |
-|-------------------| ------------ |
-| `v145`            | `1.1.1`      |
+|-------------------|--------------|
+| `v145`            | `1.1.2`      |
 | `v144.3`          | `1.0.0`      |
