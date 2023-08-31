@@ -101,7 +101,12 @@ public class EntityIO{
         this.write = write;
 
         if(write){
-            for(RevisionField field : revisions.peek().fields) io(field.type, "this." + field.name, true);
+            for(RevisionField field : revisions.peek().fields) {
+                VarSymbol var = allFields.find(s -> name(s).equals(field.name));
+                if(var == null || anno(var, NoSync.class) != null) continue;
+
+                io(field.type, "this." + field.name, true);
+            }
         }else{
             Revision rev = revisions.peek();
 
@@ -111,8 +116,9 @@ public class EntityIO{
 
             for(RevisionField field : rev.fields){
                 VarSymbol var = allFields.find(s -> name(s).equals(field.name));
-                boolean sf = anno(var, SyncField.class) != null, sl = anno(var, SyncLocal.class) != null;
+                if(var == null || anno(var, NoSync.class) != null) continue;
 
+                boolean sf = anno(var, SyncField.class) != null, sl = anno(var, SyncLocal.class) != null;
                 if(sl) cont("if(!islocal)");
                 if(sf) st(field.name + lastSuffix + " = this." + field.name);
 
