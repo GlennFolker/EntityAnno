@@ -60,7 +60,7 @@ public class EntityAnnoPlugin implements Plugin<Project>{
             var propVersion = ext.getMindustryVersion().get();
 
             ObjectSet<UnsafeRunnable> fetches = new ObjectSet<>();
-            Http.get("https://api.github.com/repos/Anuken/MindustryJitpack/contents/core/src/mindustry/entities/comp?ref=" + propVersion)
+            Http.get("https://api.github.com/repos/Anuken/Mindustry/contents/core/src/mindustry/entities/comp?ref=" + propVersion)
                 .timeout(0)
                 .error(e -> { throw new RuntimeException(e); })
                 .block(res -> {
