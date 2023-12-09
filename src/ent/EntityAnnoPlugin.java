@@ -4,7 +4,6 @@ import arc.files.*;
 import arc.struct.*;
 import arc.util.*;
 import arc.util.serialization.*;
-import groovy.lang.*;
 import org.gradle.api.*;
 import org.gradle.api.file.*;
 import org.gradle.api.plugins.*;
@@ -169,14 +168,16 @@ public class EntityAnnoPlugin implements Plugin<Project>{
             });
 
             // Prevent running these tasks to speed up compile-time.
-            tasks.getByName("kaptGenerateStubsKotlin", t -> {
-                t.onlyIf(spec -> false);
-                t.getOutputs().upToDateWhen(spec -> true);
-            });
-            tasks.getByName("compileKotlin", t -> {
-                t.onlyIf(spec -> false);
-                t.getOutputs().upToDateWhen(spec -> true);
-            });
+            for(var task : new String[]{
+                "checkKotlinGradlePluginConfigurationErrors",
+                "kaptGenerateStubsKotlin",
+                "compileKotlin",
+            }) {
+                tasks.getByName(task, t -> {
+                    t.onlyIf(spec -> false);
+                    t.getOutputs().upToDateWhen(spec -> true);
+                });
+            }
         });
     }
 

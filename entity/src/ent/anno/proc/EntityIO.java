@@ -10,6 +10,8 @@ import com.sun.tools.javac.code.Symbol.*;
 import ent.anno.*;
 import ent.anno.Annotations.*;
 import ent.anno.TypeIOResolver.*;
+import mindustry.*;
+import mindustry.ctype.*;
 
 import static ent.anno.BaseProcessor.*;
 import static javax.lang.model.element.Modifier.*;
@@ -21,7 +23,7 @@ import static javax.lang.model.element.Modifier.*;
 public class EntityIO{
     public static final Json json = new Json();
     public static final String targetSuffix = "_TARGET_", lastSuffix = "_LAST_";
-    public static final StringMap refactors = new StringMap();
+    public static final StringMap refactors = StringMap.of("mindustry.entities.units.BuildRequest", "mindustry.entities.units.BuildPlan");
 
     public final BaseProcessor proc;
     public final ClassSerializer serializer;
@@ -64,7 +66,7 @@ public class EntityIO{
         Revision previous = revisions.isEmpty() ? null : revisions.peek();
         if(revisions.isEmpty() || !revisions.peek().equal(fields)){
             revisions.add(new Revision(nextRevision, fields.map(f -> new RevisionField(f.name, f.type.toString()))));
-            Log.warn("Adding new revision @ for @.\nPre = @\nNew = @\n", nextRevision, name, previous == null ? null : previous.fields.toString(", ", f -> f.name + ":" + f.type), fields.toString(", ", f -> f.name + ":" + f.type.toString()));
+            Log.warn("Adding new revision @ for @.\nPre = @\nNew = @\n", nextRevision, name, previous == null ? "(none)" : previous.fields.toString(", ", f -> f.name + ":" + f.type), fields.toString(", ", f -> f.name + ":" + f.type.toString()));
 
             directory.child(nextRevision + ".json").writeString(json.toJson(revisions.peek()));
         }
@@ -79,29 +81,28 @@ public class EntityIO{
             for(RevisionField field : revisions.peek().fields) io(field.type, "this." + field.name, false);
         }else{
             st("short REV = read.s()");
-            for(int i = 0; i < revisions.size; i++){
-                Revision rev = revisions.get(i);
-                if(i == 0){
-                    cont("if(REV == $L)", rev.version);
-                }else{
-                    ncont("else if(REV == $L)", rev.version);
-                }
 
+            cont("switch(REV)");
+            for(Revision rev : revisions){
+                cont("case $L ->", rev.version);
                 for(RevisionField field : rev.fields) io(field.type, presentFields.contains(field.name) ? "this." + field.name + " = " : "", false);
+                econt();
             }
 
-            ncont("else");
-            st("throw new IllegalArgumentException(\"Unknown revision '\" + REV + \"' for entities type '" + name + "'\")");
+            cont("default ->");
+            st("throw new $T(\"Unknown revision '\" + REV + \"' for entities type '" + name + "'\")", spec(IllegalArgumentException.class));
+            econt();
+
             econt();
         }
     }
 
-    public void writeSync(MethodSpec.Builder method, boolean write, /*Seq<VarSymbol> syncFields,*/ Seq<VarSymbol> allFields){
+    public void writeSync(MethodSpec.Builder method, boolean write, Seq<VarSymbol> allFields){
         this.method = method;
         this.write = write;
 
         if(write){
-            for(RevisionField field : revisions.peek().fields) {
+            for(RevisionField field : revisions.peek().fields){
                 VarSymbol var = allFields.find(s -> name(s).equals(field.name));
                 if(var == null || anno(var, NoSync.class) != null) continue;
 
@@ -110,8 +111,8 @@ public class EntityIO{
         }else{
             Revision rev = revisions.peek();
 
-            st("if(lastUpdated != 0) updateSpacing = $T.timeSinceMillis(lastUpdated)", Time.class);
-            st("lastUpdated = $T.millis()", Time.class);
+            st("if(lastUpdated != 0) updateSpacing = $T.timeSinceMillis(lastUpdated)", spec(Time.class));
+            st("lastUpdated = $T.millis()", spec(Time.class));
             st("boolean islocal = isLocal()");
 
             for(RevisionField field : rev.fields){
@@ -150,8 +151,8 @@ public class EntityIO{
                 st("buffer.put(this.$L)", name(field));
             }
         }else{
-            st("if(lastUpdated != 0) updateSpacing = $T.timeSinceMillis(lastUpdated)", Time.class);
-            st("lastUpdated = $T.millis()", Time.class);
+            st("if(lastUpdated != 0) updateSpacing = $T.timeSinceMillis(lastUpdated)", spec(Time.class));
+            st("lastUpdated = $T.millis()", spec(Time.class));
 
             for(VarSymbol field : syncFields){
                 st("this.$L = this.$L", name(field) + lastSuffix, name(field));
@@ -172,7 +173,7 @@ public class EntityIO{
             String name = name(field), targetName = name + targetSuffix, lastName = name + lastSuffix;
             st("$L = $L($T.$L($L, $L, alpha))",
                 name, anno(field, SyncField.class).clamped() ? "arc.math.Mathf.clamp" : "",
-                Mathf.class,
+                spec(Mathf.class),
                 anno(field, SyncField.class).value() ? "lerp" : "slerp", lastName, targetName
             );
         }
@@ -193,11 +194,15 @@ public class EntityIO{
 
         if(isPrimitive(type)){
             s(type.equals("boolean") ? "bool" : String.valueOf(type.charAt(0)), field);
-        }else if(proc.instanceOf(type, "mindustry.ctype.Content")){
+        }else if(
+            proc.instanceOf(type, "mindustry.ctype.Content") &&
+            !type.equals("mindustry.ai.UnitStance") &&
+            !type.equals("mindustry.ai.UnitCommand")
+        ){
             if(write){
                 s("s", field + ".id");
             }else{
-                st(field + "mindustry.Vars.content.getByID(mindustry.ctype.ContentType.$L, read.s())", name(type).toLowerCase().replace("type", ""));
+                st(field + "$T.content.getByID($T.$L, read.s())", spec(Vars.class), spec(ContentType.class), name(type).toLowerCase().replace("type", ""));
             }
         }else if((serializer.writers.containsKey(type) || (network && serializer.netWriters.containsKey(type))) && write){
             st("$L(write, $L)", network ? serializer.getNetWriter(type, null) : serializer.writers.get(type), field);

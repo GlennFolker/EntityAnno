@@ -4,11 +4,11 @@ Utility tools for generating [`Mindustry`](https://github.com/Anuken/Mindustry) 
 ## Installation
 Note that this only works with Java projects, not Kotlin or Scala or other similar JVM languages. The important bits are as following:
 
-0. - Install [JDK 17](https://adoptium.net/temurin/releases/) or above.
+1. - Install [JDK 17](https://adoptium.net/temurin/releases/) or above.
    - Use [Anuke's mod template](https://github.com/Anuken/MindustryJavaModTemplate). Not doing so will render you as "know what you're doing" and it's your responsibility to bend the guides as suited to your needs (see [Entesting](https://github.com/GlennFolker/Entesting) for an example without the template).
    - Assume `/` is your mod's root folder.
    - If mentioned files don't exist, create them.
-1. Go to `/settings.gradle` and add these lines:
+2. Go to `/settings.gradle` and add these lines:
    ```gradle
    pluginManagement{
        repositories{
@@ -22,11 +22,11 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    }
    ```
    This is done so that Gradle can find this plugin, and to enforce usage of Java 17+ for compiling.
-2. Go to `/gradle.properties` and add these lines:
+3. Go to `/gradle.properties` and add these lines:
    ```properties
    mindustryVersion = v145
    arcVersion = v145
-   entVersion = 1.1.2
+   entVersion = 1.2.0
 
    kapt.include.compile.classpath = false
    kotlin.stdlib.default.dependency = false
@@ -34,7 +34,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    - You can tweak `mindustryVersion` to any tag/commit you prefer (and have `arcVersion` _exactly_ the same as said `Mindustry` version uses, done by looking at the `archash` property in `Mindustry`'s `gradle.properties`).
    - `entVersion` should be left alone, and set to the latest release of _this_ repository (not `Mindustry`! Exact fetched sources will be dealt with later).
    - The KAPT/Kotlin stuff at the bottom is used to decrease compile-time penalty and not use the entire Kotlin JVM standard libraries, because they're literally pointless in this context.
-3. Go to `/gradle.properties`, and in the property `org.gradle.jvmargs`, replace `--add-exports` with `--add-opens` and remove `--illegal-access=permit` so it looks like below:
+4. Go to `/gradle.properties`, and in the property `org.gradle.jvmargs`, replace `--add-exports` with `--add-opens` and remove `--illegal-access=permit` so it looks like below:
    ```properties
    org.gradle.jvmargs = \
    --add-opens=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED \
@@ -51,7 +51,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    --add-opens=java.base/sun.reflect.annotation=ALL-UNNAMED
    ```
    This is done to grant necessary internal API accesses for the annotation processor.
-4. Go to `/build.gradle` and replace this line:
+5. Go to `/build.gradle` and replace this line:
    ```gradle
    apply plugin: "java"
    ```
@@ -63,7 +63,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    }
    ```
    This is the core part of the usage.
-5. Go to `/build.gradle` and replace these lines:
+6. Go to `/build.gradle` and replace these lines:
    ```gradle
    targetCompatibility = 8
    sourceCompatibility = JavaVersion.VERSION_16
@@ -80,7 +80,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    }
    ```
    This is to allow compiling with Java 17 syntaxes while targeting Java 8 bytecodes.
-6. Go to `/build.gradle` and replace these lines:
+7. Go to `/build.gradle` and replace these lines:
    ```gradle
    ext{
        //the build number that this mod is made for
@@ -102,7 +102,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        sdkRoot = System.getenv("ANDROID_SDK_ROOT") ?: System.getenv("ANDROID_HOME")
    }
    ```
-7. Go to `/build.gradle` and replace these lines:
+8. Go to `/build.gradle` and replace these lines:
    ```gradle
    dependencies{
        compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
@@ -131,7 +131,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    2. Lets you use Java 9+ syntaxes while still targeting Java 8 bytecode (which is necessary), mostly because Java is stupid.
    3. Adds the annotation processor classpath into your project, without bundling them into the final `.jar`.
    4. Registers the annotation processor to the compiler. _Why KAPT?_ Because KAPT is fast and generally friendly to incremental compilation, especially if your project is decoupled into several modules (like [Confictura](https://github.com/GlennFolker/Confictura)).
-8. Go to `/build.gradle` and remove these lines:
+9. Go to `/build.gradle` and remove these lines:
    ```gradle
    //force arc version
    configurations.all{
@@ -142,7 +142,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        }
    }
    ```
-9. Add this property block in `/build.gradle` wherever you like (as long as it's done in project evaluation, that is):
+10. Add this property block in `/build.gradle` wherever you like (as long as it's done in project evaluation, that is):
    ```gradle
    entityAnno{
        modName = 'your-mod-name'
@@ -155,11 +155,11 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    ```
    - `modName` is the internal mod name as specified in your `/mod.json`.
    - `mindustryVersion` is the `Mindustry` version that you use (`project['mindustryVersion']` refers to the property in `/gradle.properties`, so make sure the property name matches!), so that the annotation processor fetches correct entity component source codes.
-   - `revisionDir` is used for saves and netcodes history, don't worry about it. Just make sure _not_ to `.gitignore` the folder.
+   - `revisionDir` is used for saves and net-codes history, don't worry about it. Just make sure _not_ to `.gitignore` the folder.
    - `fetchPackage`, `genSrcPackage`, and `genPackage` are respectively the package names for storing downloaded vanilla sources, your entity component sources (that'll be excluded from the final `.jar`), and the resulting generated entity classes. Change `yourmod` to your mod's root package name.
-10. Add the line `EntityRegistry.register();` (from the `genPackage`) in your mod class' `loadContent()` method.
-11. Refer to [usage](/USAGE.md) for more detailed entity annotation usages.
-12. Compile and use the mod as the guide in the mod template says.
+11. Add the line `EntityRegistry.register();` (from the `genPackage`) in your mod class' `loadContent()` method.
+12. Refer to [usage](/USAGE.md) for more detailed entity annotation usages.
+13. Compile and use the mod as the guide in the mod template says.
 
 ## Contributing
 This project is licensed under [GNU GPL v3.0](/LICENSE).
@@ -167,5 +167,6 @@ This project is licensed under [GNU GPL v3.0](/LICENSE).
 ## Version Compatibility
 | `Mindustry`/`Arc` | `EntityAnno` |
 |-------------------|--------------|
+| `v146`            | `1.2.0`      |
 | `v145`            | `1.1.2`      |
 | `v144.3`          | `1.0.0`      |

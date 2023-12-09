@@ -63,6 +63,7 @@ public class EntityProcessor extends BaseProcessor{
 
     protected Seq<EntityDefinition> definitions = new Seq<>();
 
+    // protected ObjectSet<TypeSpec.Builder> baseClassIndexers = new ObjectSet<>();
     protected ClassSerializer serializer;
 
     {
@@ -134,7 +135,9 @@ public class EntityProcessor extends BaseProcessor{
                     comp(Syncc.class), "sync",
                     comp(Drawc.class), "draw",
                     comp(Firec.class), "fire",
-                    comp(Puddlec.class), "puddle"
+                    comp(Puddlec.class), "puddle",
+                    comp(WorldLabelc.class), "label",
+                    comp(PowerGraphUpdaterc.class), "powerGraph"
                 );
 
                 for(Symbol s : elements.getPackageElement("mindustry.gen").getEnclosedElements()){
@@ -328,6 +331,10 @@ public class EntityProcessor extends BaseProcessor{
                         }
                     }
 
+                    /*TypeSpec.Builder baseClassBuilder = baseClassType == null
+                        ? null
+                        : baseClasses.get(baseName(baseClassType));
+                    boolean addIndexToBase = baseClassBuilder != null && baseClassIndexers.add(baseClassBuilder);*/
                     boolean typeIsBase = baseClassType != null && anno(def, EntityComponent.class) != null && anno(def, EntityComponent.class).base();
                     String name = def instanceof ClassSymbol ? baseName(name(def)) : createName(defComps);
 
@@ -445,6 +452,22 @@ public class EntityProcessor extends BaseProcessor{
 
                     EntityIO io = new EntityIO(this, name, builder, allFieldSpecs, serializer, revDir.child(name));
                     boolean hasIO = defAnno.genIO() && (isSync || defAnno.serialize());
+
+                    /*if(baseClassBuilder == null || addIndexToBase){
+                        TypeSpec.Builder indexBuilder = baseClassBuilder == null ? builder : baseClassBuilder;
+                        for(String group : defGroups){
+                            indexBuilder
+                                .addSuperinterface(ClassName.get("mindustry.gen", "IndexableEntity__" + group))
+                                .addMethod(
+                                    MethodSpec.methodBuilder("setIndex__" + group)
+                                        .addAnnotation(spec(Override.class))
+                                        .addParameter(ClassName.INT, "index")
+                                        .addModifiers(PUBLIC)
+                                        .addStatement("index__$L = index", group)
+                                    .build()
+                                );
+                        }
+                    }*/
 
                     boolean serializeOverride = false;
                     for(Entry<String, Seq<MethodSymbol>> entry : methods.entries()){
@@ -569,7 +592,8 @@ public class EntityProcessor extends BaseProcessor{
                         wraps.removeAll(standaloneWraps::contains);
                         inserts.sort(methodSorter);
 
-                        if(mname.equals("add") || mname.equals("remove")){
+                        boolean isAdd;
+                        if((isAdd = mname.equals("add")) || mname.equals("remove")){
                             bypass.selectFrom(entries, e -> anno(e, BypassGroupCheck.class) != null);
                             entries.removeAll(bypass);
 
@@ -584,7 +608,17 @@ public class EntityProcessor extends BaseProcessor{
                             append(methBuilder, defComps.values(), bypass, inserts, wraps, writeBlock, null);
 
                             methBuilder.addStatement("if($Ladded) return", mname.equals("add") ? "" : "!");
-                            for(String group : defGroups) methBuilder.addStatement("$T.$L.$L(this)", spec(Groups.class), group, mname);
+                            for(String group : defGroups){
+                                if(isAdd){
+                                    methBuilder.addStatement("$T.$L.add(this)", spec(Groups.class), group);
+                                    //methBuilder.addStatement("index__$L = $T.$L.addIndex(this)", group, spec(Groups.class), group);
+                                }else{
+                                    methBuilder.addStatement("$T.$L.remove(this)", spec(Groups.class), group);
+                                    /*methBuilder
+                                        .addStatement("$T.$L.removeIndex(this, index__$L)", spec(Groups.class), group, group)
+                                        .addStatement("index__$L = -1", group);*/
+                                }
+                            }
                         }
 
                         if(!standaloneWraps.isEmpty()){
@@ -696,6 +730,17 @@ public class EntityProcessor extends BaseProcessor{
                     builder
                         .addMethod(MethodSpec.constructorBuilder().addModifiers(PROTECTED).build())
                         .addMethod(creator.build());
+
+                    /*if(baseClassBuilder == null || addIndexToBase){
+                        TypeSpec.Builder fieldBuilder = baseClassBuilder == null ? builder : baseClassBuilder;
+                        for(String group : defGroups){
+                            fieldBuilder.addField(
+                                FieldSpec.builder(ClassName.INT, "index__" + group, PROTECTED, TRANSIENT)
+                                    .initializer("-1")
+                                .build()
+                            );
+                        }
+                    }*/
 
                     definitions.add(new EntityDefinition(name, builder, def, typeIsBase ? null : baseClassType, defComps.values().toSeq(), allFieldSpecs.copy()));
                 }

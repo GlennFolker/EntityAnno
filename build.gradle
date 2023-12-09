@@ -20,7 +20,7 @@ configure(allprojects){
     apply plugin: 'maven-publish'
 
     group = 'com.github.GlennFolker'
-    version = '1.1.2'
+    version = '1.2.0'
 
     ext{
         compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17
@@ -68,7 +68,6 @@ configure(allprojects){
         }
     }
 
-    sourceCompatibility = compilerVersion
     tasks.withType(JavaCompile).configureEach{
         options.incremental = true
         options.encoding = 'UTF-8'
