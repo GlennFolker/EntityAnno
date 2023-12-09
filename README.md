@@ -24,8 +24,8 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    This is done so that Gradle can find this plugin, and to enforce usage of Java 17+ for compiling.
 3. Go to `/gradle.properties` and add these lines:
    ```properties
-   mindustryVersion = v145
-   arcVersion = v145
+   mindustryVersion = v146
+   arcVersion = v146
    entVersion = 1.2.0
 
    kapt.include.compile.classpath = false
@@ -84,7 +84,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
    ```gradle
    ext{
        //the build number that this mod is made for
-       mindustryVersion = 'v145'
+       mindustryVersion = 'v146'
        jabelVersion = "93fde537c7"
        sdkRoot = System.getenv("ANDROID_HOME") ?: System.getenv("ANDROID_SDK_ROOT")
    }
@@ -111,7 +111,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
    }
    ```
-   With these (without the comments, of course):
+   With these:
    ```gradle
    dependencies{
        // i.
@@ -145,18 +145,22 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
 10. Add this property block in `/build.gradle` wherever you like (as long as it's done in project evaluation, that is):
    ```gradle
    entityAnno{
+       // i.
        modName = 'your-mod-name'
+       // ii.
        mindustryVersion = project['mindustryVersion']
+       // iii.
        revisionDir = file("$rootDir/revisions/")
+       // iv.
        fetchPackage = 'yourmod.fetched'
        genSrcPackage = 'yourmod.entities.comp'
        genPackage = 'yourmod.gen.entities'
    }
    ```
-   - `modName` is the internal mod name as specified in your `/mod.json`.
-   - `mindustryVersion` is the `Mindustry` version that you use (`project['mindustryVersion']` refers to the property in `/gradle.properties`, so make sure the property name matches!), so that the annotation processor fetches correct entity component source codes.
-   - `revisionDir` is used for saves and net-codes history, don't worry about it. Just make sure _not_ to `.gitignore` the folder.
-   - `fetchPackage`, `genSrcPackage`, and `genPackage` are respectively the package names for storing downloaded vanilla sources, your entity component sources (that'll be excluded from the final `.jar`), and the resulting generated entity classes. Change `yourmod` to your mod's root package name.
+   1. `modName` is the internal mod name as specified in your `/mod.json`.
+   2. `mindustryVersion` is the `Mindustry` version that you use (`project['mindustryVersion']` refers to the property in `/gradle.properties`, so make sure the property name matches!), so that the annotation processor fetches correct entity component source codes.
+   3. `revisionDir` is used for saves and net-codes history, don't worry about it. Just make sure _not_ to `.gitignore` the folder.
+   4. `fetchPackage`, `genSrcPackage`, and `genPackage` are respectively the package names for storing downloaded vanilla sources, your entity component sources (that'll be excluded from the final `.jar`), and the resulting generated entity classes. Change `yourmod` to your mod's root package name.
 11. Add the line `EntityRegistry.register();` (from the `genPackage`) in your mod class' `loadContent()` method.
 12. Refer to [usage](/USAGE.md) for more detailed entity annotation usages.
 13. Compile and use the mod as the guide in the mod template says.

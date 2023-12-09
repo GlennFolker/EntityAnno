@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.*;
  */
 @SuppressWarnings("unused")
 public class EntityAnnoPlugin implements Plugin<Project>{
-    public static final String defMindustryVersion = "v145";
+    public static final String defMindustryVersion = "v146";
     public static final int version = 0;
 
     @Override
