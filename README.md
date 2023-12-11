@@ -14,7 +14,7 @@ Note that this only works with Java projects, not Kotlin or Scala or other simil
        repositories{
            gradlePluginPortal()
            maven{url 'https://www.jitpack.io'}
-           maven{url "https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository"}
+           maven{url 'https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository'}
        }
    }
    
