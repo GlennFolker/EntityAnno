@@ -8,21 +8,21 @@ import org.gradle.api.*;
 import org.gradle.api.file.*;
 import org.gradle.api.plugins.*;
 import org.gradle.api.tasks.bundling.*;
-import org.gradle.api.tasks.compile.*;
 import org.jetbrains.kotlin.gradle.internal.*;
 import org.jetbrains.kotlin.gradle.plugin.*;
+import org.jetbrains.kotlin.gradle.plugin.diagnostics.*;
+import org.jetbrains.kotlin.gradle.tasks.*;
 
 import java.io.*;
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.*;
 
 /**
  * Gradle plugin for creating necessary entity component generation classes.
  * @author GlennFolker
  */
-@SuppressWarnings("unused")
+@SuppressWarnings("unchecked")
 public class EntityAnnoPlugin implements Plugin<Project>{
     public static final String defMindustryVersion = "v146";
-    public static final int version = 0;
 
     @Override
     public void apply(Project project){
@@ -35,148 +35,127 @@ public class EntityAnnoPlugin implements Plugin<Project>{
         plugins.apply(KotlinPluginWrapper.class);
         plugins.apply(Kapt3GradleSubplugin.class);
 
-        var compileJava = tasks.getAt("compileJava");
-        var fetchDir = new Fi(new File(compileJava.getTemporaryDir(), "fetched"));
-        var fetchTemp = fetchDir.sibling("fetch.txt");
-
-        // Add the `entityAnno{}` extension
         var ext = exts.create("entityAnno", EntityAnnoExtension.class);
         ext.getMindustryVersion().convention(defMindustryVersion);
+        ext.getIsJitpack().convention(false);
+
+        var fetchDir = project.getLayout().getBuildDirectory().dir("fetched");
+        var fetchComps = tasks.create("fetchComps", t -> {
+            t.getOutputs().dir(fetchDir);
+            t.getOutputs().upToDateWhen(tt -> {
+                var cache = new Fi(fetchDir.get().file("cache.txt").getAsFile());
+                return cache.exists() && cache.readString("UTF-8").equals(ext.getMindustryVersion().get());
+            });
+
+            t.doFirst(tt -> {
+                var dir = fetchDir.get();
+                var dirFi = new Fi(dir.getAsFile());
+                dirFi.emptyDirectory();
+                dirFi.mkdirs();
+
+                var repository = ext.getIsJitpack().get() ? "MindustryJitpack" : "Mindustry";
+                var version = ext.getMindustryVersion().get();
+
+                Queue<Future<?>> fetches = new Queue<>();
+                int[] remaining = {0, 0};
+                Http.get("https://api.github.com/repos/Anuken/" + repository + "/contents/core/src/mindustry/entities/comp?ref=" + version)
+                    .timeout(0)
+                    .error(e -> { throw new RuntimeException(e); })
+                    .block(res -> {
+                        var list = Jval.read(res.getResultAsString()).asArray();
+                        remaining[0] = remaining[1] = list.size;
+
+                        var fetchPackage = ext.getFetchPackage().get();
+                        var exec = Threads.executor("EntityAnno-Fetcher", list.size);
+
+                        var loc = new Fi(new File(dir.getAsFile(), ext.getFetchPackage().get().replace('.', '/')));
+                        loc.mkdirs();
+
+                        for(var val : list){
+                            fetches.addLast(exec.submit(() -> Http.get(val.getString("download_url"))
+                                .timeout(0)
+                                .error(e -> { throw new RuntimeException(e); })
+                                .block(comp -> loc
+                                    .child(val.getString("name"))
+                                    .writeString(procComp(comp.getResultAsString(), fetchPackage), false)
+                                )
+                            ));
+                        }
+                        exec.shutdown();
+                    });
+
+                while(!fetches.isEmpty()){
+                    try{
+                        fetches.removeFirst().get();
+                        remaining[0]--;
+                    }catch(InterruptedException | ExecutionException e){
+                        throw new RuntimeException(e);
+                    }
+                }
+
+                if(remaining[0] != 0) throw new IllegalStateException("Couldn't write all components; found " + remaining[0] + " unwritten.");
+                new Fi(fetchDir.get().file("cache.txt").getAsFile()).writeString(version, false, "UTF-8");
+
+                project.getLogger().lifecycle("Wrote {} components.", remaining[1]);
+            });
+        });
 
         tasks.create("procComps", t -> t.doFirst(tt -> {
             var fetchPackage = ext.getFetchPackage().get();
-            for(var fi : fetchDir.list()){
-                if(!fi.extEquals("java")) continue;
-                fi.writeString(procComp(fi.readString(), fetchPackage), false);
-            }
-        }));
-
-        var fetchComps = tasks.create("fetchComps", t -> t.doFirst(tt -> {
-            project.delete(fetchDir.file());
-            fetchDir.mkdirs();
-
-            var amount = new AtomicInteger(0);
-            var propVersion = ext.getMindustryVersion().get();
-
-            ObjectSet<UnsafeRunnable> fetches = new ObjectSet<>();
-            Http.get("https://api.github.com/repos/Anuken/Mindustry/contents/core/src/mindustry/entities/comp?ref=" + propVersion)
-                .timeout(0)
-                .error(e -> { throw new RuntimeException(e); })
-                .block(res -> {
-                    var list = Jval.read(res.getResultAsString()).asArray();
-                    amount.set(list.size);
-
-                    var fetchPackage = ext.getFetchPackage().get();
-                    var srcDir = fetchDir.child(fetchPackage.replace('.', '/'));
-                    srcDir.mkdirs();
-
-                    for(var val : list){
-                        var filename = val.get("name").asString();
-                        var fileurl = val.get("download_url").asString();
-
-                        fetches.add(() -> Http.get(fileurl)
-                            .timeout(0)
-                            .error(e -> { throw new RuntimeException(e); })
-                            .block(comp -> {
-                                var fi = srcDir.child(filename);
-                                fi.writeString(procComp(comp.getResultAsString(), fetchPackage), false);
-
-                                amount.decrementAndGet();
-                            })
-                        );
-                    }
-                });
-
-            var threads = fetches.toSeq().map(fetch -> new Thread(() -> {
-                try{
-                    fetch.run();
-                }catch(Throwable e){
-                    Log.err(e);
-                }
-
-                synchronized(tt){
-                    fetches.remove(fetch);
-                }
-            }));
-
-            threads.each(Thread::start);
-            while(true){
-                if(!fetches.isEmpty()){
-                    Thread.yield();
-                }else{
-                    threads.each(worker -> {
-                        try{
-                            worker.join();
-                        }catch(InterruptedException e){
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    break;
-                }
+            var files = new Fi(new File(fetchDir.get().getAsFile(), fetchPackage.replace('.', '/'))).list();
+            for(var file : files){
+                if(!file.extEquals("java")) continue;
+                file.writeString(procComp(file.readString("UTF-8"), fetchPackage), false, "UTF-8");
             }
 
-            int count = amount.get();
-            if(count != 0) throw new IllegalStateException("Couldn't write all components, found " + count + " unwritten.");
-
-            fetchTemp.writeString(propVersion + "/" + version);
+            if(files.length == 0){
+                project.getLogger().warn("No fetched component files found. Either run `fetchComps`, or manually copy the files and run this task again.");
+            }else{
+                project.getLogger().lifecycle("Processed {} components.", files.length);
+            }
         }));
 
         project.afterEvaluate(p -> {
-            // Configure KAPT extension.
+            // Configure KAPT extension and add annotation processor options.
             var kaptExt = exts.getByType(KaptExtension.class);
             kaptExt.setKeepJavacAnnotationProcessors(true);
-
-            // Add "${tasks.compileJava.temporaryDir}/fetched/" as Java source set.
-            exts.getByType(JavaPluginExtension.class)
-                .getSourceSets().getAt("main")
-                .getJava().srcDir(fetchDir.file());
-
-            // Exclude fetched and generation source classes.
-            for(var task : tasks.withType(Jar.class)){
-                task.setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE);
-                task.exclude(
-                    ext.getFetchPackage().get().replace('.', '/') + "/**",
-                    ext.getGenSrcPackage().get().replace('.', '/') + "/**"
-                );
-            }
-
-            // Fetch components first.
-            var propVersion = ext.getMindustryVersion().get();
-            for(var task : tasks.withType(JavaCompile.class)){
-                if(!fetchDir.exists() || !fetchTemp.exists()){
-                    task.dependsOn(fetchComps);
-                    task.mustRunAfter(fetchComps);
-                }else{
-                    var content = fetchTemp.readString().split("/");
-                    var ver = content[0].strip();
-                    var rev = content[1].strip();
-
-                    if(!ver.equals(propVersion) || !rev.equals(String.valueOf(version))){
-                        task.dependsOn(fetchComps);
-                        task.mustRunAfter(fetchComps);
-                    }
-                }
-            }
-
-            // Add annotation processor options.
             kaptExt.arguments(args -> {
                 args.arg("modName", ext.getModName().get());
                 args.arg("genPackage", ext.getGenPackage().get());
                 args.arg("fetchPackage", ext.getFetchPackage().get());
                 args.arg("revisionDir", ext.getRevisionDir().get().getAbsolutePath());
+                args.arg("compilerVersion", JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17);
                 return null;
             });
 
+            // Add fetched sources as KAPT input.
+            tasks.withType(Kapt.class, task -> task.getInputs().files(fetchComps));
+
+            // Add `fetchDir` and KAPT output as Java source sets.
+            exts.getByType(JavaPluginExtension.class)
+                .getSourceSets().getByName("main")
+                .getJava().srcDirs(
+                    fetchDir,
+                    project.getLayout().getBuildDirectory()
+                        .dir("generated")
+                        .map(dir -> dir.dir("source").dir("kapt").dir("main"))
+                );
+
+            // Exclude fetched and generation source classes.
+            tasks.withType(Jar.class, task -> {
+                task.setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE);
+                task.exclude(
+                    ext.getFetchPackage().get().replace('.', '/') + "/**",
+                    ext.getGenSrcPackage().get().replace('.', '/') + "/**"
+                );
+            });
+
             // Prevent running these tasks to speed up compile-time.
-            for(var task : new String[]{
-                "checkKotlinGradlePluginConfigurationErrors",
-                "kaptGenerateStubsKotlin",
-                "compileKotlin",
-            }) {
-                tasks.getByName(task, t -> {
-                    t.onlyIf(spec -> false);
-                    t.getOutputs().upToDateWhen(spec -> true);
-                });
+            for(var type : new Class[]{
+                CheckKotlinGradlePluginConfigurationErrors.class,
+                KotlinCompile.class
+            }){
+                tasks.withType(type, t -> t.onlyIf(spec -> false));
             }
         });
     }

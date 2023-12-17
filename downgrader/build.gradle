@@ -1,8 +1,0 @@
-sourceSets.main{
-    java.srcDirs = ['src/']
-    resources.srcDirs = ['assets/']
-}
-
-dependencies{
-    implementation arc(':arc-core')
-}

@@ -14,7 +14,7 @@ import java.util.*;
 import static com.sun.tools.javac.code.Source.Feature.*;
 
 /**
- * Makes users able to use Java 9+ syntactic-sugars while still targetting Java 8.
+ * Makes users able to use Java 9+ syntactic-sugars while still targeting Java 8.
  * @author GlennFolker
  */
 public final class Downgrader extends AbstractProcessor{

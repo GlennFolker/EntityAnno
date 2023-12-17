@@ -36,6 +36,7 @@ public abstract class BaseProcessor implements Processor{
     public String modName;
     public String packageName;
     public String packageFetch;
+    public SourceVersion srcVersion;
 
     public Filer filer;
     public Messager messager;
@@ -76,6 +77,12 @@ public abstract class BaseProcessor implements Processor{
         if(packageFetch == null){
             throw new IllegalStateException("`fetchPackage` not supplied!");
         }
+
+        String version = env.getOptions().get("compilerVersion");
+        if(version == null){
+            throw new IllegalStateException("`compilerVersion` not supplied!");
+        }
+        srcVersion = SourceVersion.valueOf("RELEASE_" + version);
 
         genStrip = Pattern.compile(packageName.replace(".", "\\.") + "\\.[^A-Z]*");
 
@@ -367,7 +374,7 @@ public abstract class BaseProcessor implements Processor{
 
     @Override
     public SourceVersion getSupportedSourceVersion(){
-        return SourceVersion.RELEASE_17;
+        return srcVersion;
     }
 
     @Override
@@ -380,7 +387,8 @@ public abstract class BaseProcessor implements Processor{
         return Set.of(
             "modName",
             "genPackage",
-            "fetchPackage"
+            "fetchPackage",
+            "compilerVersion"
         );
     }
 }

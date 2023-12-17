@@ -33,12 +33,12 @@ import ent.anno.Annotations.*;
 import mindustry.gen.*;
 import mymod.gen.entities.*;
 
-class EntityDefinitions{
+class EntityDefinitions<E>{
     // This will generate `MyUnit` entity class that implements both `MyComp` and `Unit` in `mymod.gen.entities`.
     // The naming in the case of external `@EntityDef`s like in this case is reversed order of the components, without the `*c`:
     // `My` + `Unit` = `MyUnit`.
-    // The `Object myUnit` doesn't really matter; it's just there to hold the annotation so the processor recognizes it.
-    @EntityDef({Unitc.class, Myc.class}) Object myUnit;
+    // The `E myUnit` doesn't really matter; it's just there to hold the annotation so the processor recognizes it.
+    @EntityDef({Unitc.class, Myc.class}) E myUnit;
 }
 ```
 ```java

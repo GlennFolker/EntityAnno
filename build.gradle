@@ -3,25 +3,13 @@ plugins{
     id 'maven-publish'
 }
 
-sourceSets.main.java.srcDirs = ['src/']
-
-gradlePlugin{
-    plugins{
-        entityAnno{
-            id = 'com.github.GlennFolker.EntityAnno'
-            displayName = 'EntityAnno'
-            implementationClass = 'ent.EntityAnnoPlugin'
-        }
-    }
-}
-
 configure(allprojects){
     apply plugin: 'java'
     apply plugin: 'maven-publish'
 
-    group = 'com.github.GlennFolker'
-    version = '1.2.0'
+    sourceSets.main.java.srcDirs = [layout.projectDirectory.dir('src')]
 
+    version = 'v146.0.0'
     ext{
         compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17
 
@@ -31,6 +19,14 @@ configure(allprojects){
 
         mindustry = {String module ->
             return "com.github.Anuken.Mindustry$module:$mindustryVersion"
+        }
+    }
+
+    configurations.configureEach{
+        resolutionStrategy.eachDependency{
+            if(requested.group == 'com.github.Anuken.Arc'){
+                useVersion arcVersion
+            }
         }
     }
 
@@ -51,16 +47,12 @@ configure(allprojects){
         }
     }
 
-    artifacts{
-        archives tasks.sourcesJar
-    }
-
     tasks.withType(Javadoc).configureEach{
         options{
             encoding = 'UTF-8'
 
             addStringOption('Xdoclint:none', '-quiet')
-            addMultilineStringsOption('-add-exports').setValue((project['org.gradle.jvmargs'] as String)
+            addMultilineStringsOption('-add-exports').setValue((project.property('org.gradle.jvmargs') as String)
                 .split('\\s+')
                 .findAll{it.startsWith('--add-opens')}
                 .collect{it.substring('--add-opens='.length())}
@@ -71,6 +63,7 @@ configure(allprojects){
     tasks.withType(JavaCompile).configureEach{
         options.incremental = true
         options.encoding = 'UTF-8'
+        options.compilerArgs << '-Xlint:-options'
 
         sourceCompatibility = compilerVersion
         targetCompatibility = 8
@@ -81,20 +74,47 @@ configure(allprojects){
     }
 }
 
-configure([project(':downgrader'), project(':entity')]){
-    publishing{
-        publications{
-            maven(MavenPublication){
-                from components.java
+configure(rootProject){
+    apply plugin: 'java-gradle-plugin'
+
+    group = 'com.github.GlennFolker'
+    gradlePlugin{
+        plugins{
+            entityAnno{
+                id = 'com.github.GlennFolker.EntityAnno'
+                displayName = 'EntityAnno'
+                implementationClass = 'ent.EntityAnnoPlugin'
             }
         }
     }
+
+    dependencies{
+        annotationProcessor project(':downgrader')
+
+        implementation "${arc(':arc-core')}"
+        implementation "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:$kotlinVersion"
+        implementation "org.jetbrains.kotlin.kapt:org.jetbrains.kotlin.kapt.gradle.plugin:$kotlinVersion"
+    }
 }
 
-dependencies{
-    annotationProcessor project(':downgrader')
+configure([project(':downgrader'), project(':entity')]){
+    sourceSets.main.resources.srcDirs = [layout.projectDirectory.dir('assets')]
 
-    implementation arc(':arc-core')
-    implementation "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:$kotlinVersion"
-    implementation "org.jetbrains.kotlin.kapt:org.jetbrains.kotlin.kapt.gradle.plugin:$kotlinVersion"
+    group = 'com.github.GlennFolker.EntityAnno'
+    publishing.publications.register('maven', MavenPublication){
+        from components.java
+    }
+
+    dependencies{
+        implementation "${arc(':arc-core')}"
+    }
+}
+
+configure(project(':entity')){
+    dependencies{
+        annotationProcessor project(':downgrader')
+
+        implementation "${mindustry(':core')}"
+        implementation "com.squareup:javapoet:$javapoetVersion"
+    }
 }
