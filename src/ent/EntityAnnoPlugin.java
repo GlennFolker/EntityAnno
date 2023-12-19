@@ -11,7 +11,8 @@ import org.gradle.api.tasks.bundling.*;
 import org.jetbrains.kotlin.gradle.internal.*;
 import org.jetbrains.kotlin.gradle.plugin.*;
 import org.jetbrains.kotlin.gradle.plugin.diagnostics.*;
-import org.jetbrains.kotlin.gradle.tasks.*;
+import org.jetbrains.kotlin.gradle.tasks.Kapt;
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile;
 
 import java.io.*;
 import java.util.concurrent.*;
@@ -29,6 +30,10 @@ public class EntityAnnoPlugin implements Plugin<Project>{
         var plugins = project.getPlugins();
         var exts = project.getExtensions();
         var tasks = project.getTasks();
+
+        var props = exts.getByType(ExtraPropertiesExtension.class);
+        // Don't include Kotlin standard libraries, we absolutely do not need those bloats.
+        props.set("kotlin.stdlib.default.dependency", "false");
 
         // Apply 'java', 'kotlin-jvm', and 'kotlin-kapt' plugins.
         plugins.apply("java");
@@ -128,8 +133,11 @@ public class EntityAnnoPlugin implements Plugin<Project>{
                 return null;
             });
 
-            // Add fetched sources as KAPT input.
-            tasks.withType(Kapt.class, task -> task.getInputs().files(fetchComps));
+            // Add fetched sources as KAPT input, and enable compile avoidance.
+            tasks.withType(Kapt.class, task -> {
+                task.getInputs().files(fetchComps);
+                task.getIncludeCompileClasspath().set(false);
+            });
 
             // Add `fetchDir` and KAPT output as Java source sets.
             exts.getByType(JavaPluginExtension.class)

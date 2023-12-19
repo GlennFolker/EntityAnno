@@ -9,7 +9,7 @@ configure(allprojects){
 
     sourceSets.main.java.srcDirs = [layout.projectDirectory.dir('src')]
 
-    version = 'v146.0.0'
+    version = 'v146.0.1'
     ext{
         compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17
 
