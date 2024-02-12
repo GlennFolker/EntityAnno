@@ -9,7 +9,7 @@ configure(allprojects){
 
     sourceSets.main.java.srcDirs = [layout.projectDirectory.dir('src')]
 
-    version = 'v146.0.1'
+    version = 'v146.0.2'
     ext{
         compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17
 
@@ -47,53 +47,48 @@ configure(allprojects){
         }
     }
 
-    tasks.withType(Javadoc).configureEach{
-        options{
-            encoding = 'UTF-8'
-
-            addStringOption('Xdoclint:none', '-quiet')
-            addMultilineStringsOption('-add-exports').setValue((project.property('org.gradle.jvmargs') as String)
-                .split('\\s+')
-                .findAll{it.startsWith('--add-opens')}
-                .collect{it.substring('--add-opens='.length())}
-            )
-        }
-    }
-
     tasks.withType(JavaCompile).configureEach{
         options.incremental = true
         options.encoding = 'UTF-8'
         options.compilerArgs << '-Xlint:-options'
+    }
 
-        sourceCompatibility = compilerVersion
+    tasks.withType(Javadoc).configureEach{
+        options{
+            encoding = 'UTF-8'
+
+            String exports = (project.property('org.gradle.jvmargs') as String)
+                .split('\\s+')
+                .findAll{it.startsWith('--add-opens')}
+                .collect{"--add-exports ${it.substring('--add-opens='.length())}"}
+                .inject(' '){accum, arg -> "$accum $arg"}
+
+            def opts = new File(temporaryDir, 'exports.options')
+            opts.withWriter('UTF-8'){writer -> writer.write("-Xdoclint:none $exports")}
+            optionFiles << opts
+        }
+    }
+}
+
+configure(project(':downgrader')){
+    tasks.withType(JavaCompile).configureEach{
+        sourceCompatibility = 8
+        targetCompatibility = 8
+    }
+}
+
+configure(allprojects - project(':downgrader')){
+    dependencies{
+        annotationProcessor project(':downgrader')
+    }
+
+    tasks.withType(JavaCompile).configureEach{
+        sourceCompatibility = 17
         targetCompatibility = 8
 
         doFirst{
             sourceCompatibility = 8
         }
-    }
-}
-
-configure(rootProject){
-    apply plugin: 'java-gradle-plugin'
-
-    group = 'com.github.GlennFolker'
-    gradlePlugin{
-        plugins{
-            entityAnno{
-                id = 'com.github.GlennFolker.EntityAnno'
-                displayName = 'EntityAnno'
-                implementationClass = 'ent.EntityAnnoPlugin'
-            }
-        }
-    }
-
-    dependencies{
-        annotationProcessor project(':downgrader')
-
-        implementation "${arc(':arc-core')}"
-        implementation "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:$kotlinVersion"
-        implementation "org.jetbrains.kotlin.kapt:org.jetbrains.kotlin.kapt.gradle.plugin:$kotlinVersion"
     }
 }
 
@@ -112,9 +107,24 @@ configure([project(':downgrader'), project(':entity')]){
 
 configure(project(':entity')){
     dependencies{
-        annotationProcessor project(':downgrader')
-
         implementation "${mindustry(':core')}"
         implementation "com.squareup:javapoet:$javapoetVersion"
     }
+}
+
+apply plugin: 'java-gradle-plugin'
+
+group = 'com.github.GlennFolker'
+gradlePlugin{
+    plugins.create('entityAnno'){
+        id = 'com.github.GlennFolker.EntityAnno'
+        displayName = 'EntityAnno'
+        implementationClass = 'ent.EntityAnnoPlugin'
+    }
+}
+
+dependencies{
+    implementation "${arc(':arc-core')}"
+    implementation "org.jetbrains.kotlin.jvm:org.jetbrains.kotlin.jvm.gradle.plugin:$kotlinVersion"
+    implementation "org.jetbrains.kotlin.kapt:org.jetbrains.kotlin.kapt.gradle.plugin:$kotlinVersion"
 }
