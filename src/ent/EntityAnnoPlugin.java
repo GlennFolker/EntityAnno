@@ -10,7 +10,6 @@ import org.gradle.api.plugins.*;
 import org.gradle.api.tasks.bundling.*;
 import org.jetbrains.kotlin.gradle.internal.*;
 import org.jetbrains.kotlin.gradle.plugin.*;
-import org.jetbrains.kotlin.gradle.plugin.diagnostics.*;
 import org.jetbrains.kotlin.gradle.tasks.Kapt;
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile;
 
@@ -21,7 +20,6 @@ import java.util.concurrent.*;
  * Gradle plugin for creating necessary entity component generation classes.
  * @author GlennFolker
  */
-@SuppressWarnings("unchecked")
 public class EntityAnnoPlugin implements Plugin<Project>{
     public static final String defMindustryVersion = "v146";
 
@@ -63,6 +61,7 @@ public class EntityAnnoPlugin implements Plugin<Project>{
 
                 Queue<Future<?>> fetches = new Queue<>();
                 int[] remaining = {0, 0};
+
                 Http.get("https://api.github.com/repos/Anuken/" + repository + "/contents/core/src/mindustry/entities/comp?ref=" + version)
                     .timeout(0)
                     .error(e -> { throw new RuntimeException(e); })
@@ -139,15 +138,10 @@ public class EntityAnnoPlugin implements Plugin<Project>{
                 task.getIncludeCompileClasspath().set(false);
             });
 
-            // Add `fetchDir` and KAPT output as Java source sets.
+            // Add `fetchDir` as Java source sets.
             exts.getByType(JavaPluginExtension.class)
                 .getSourceSets().getByName("main")
-                .getJava().srcDirs(
-                    fetchDir,
-                    project.getLayout().getBuildDirectory()
-                        .dir("generated")
-                        .map(dir -> dir.dir("source").dir("kapt").dir("main"))
-                );
+                .getJava().srcDirs(fetchDir);
 
             // Exclude fetched and generation source classes.
             tasks.withType(Jar.class, task -> {
@@ -159,12 +153,8 @@ public class EntityAnnoPlugin implements Plugin<Project>{
             });
 
             // Prevent running these tasks to speed up compile-time.
-            for(var type : new Class[]{
-                CheckKotlinGradlePluginConfigurationErrors.class,
-                KotlinCompile.class
-            }){
-                tasks.withType(type, t -> t.onlyIf(spec -> false));
-            }
+            tasks.getByPath("checkKotlinGradlePluginConfigurationErrors").onlyIf(spec -> false);
+            tasks.withType(KotlinCompile.class, t -> t.onlyIf(spec -> false));
         });
     }
 
