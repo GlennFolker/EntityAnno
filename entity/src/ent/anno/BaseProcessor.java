@@ -29,14 +29,13 @@ import java.util.regex.*;
  * @author GlennFolker
  * @author Anuke
  */
-@SuppressWarnings({"unused", "unchecked"})
+@SuppressWarnings("unchecked")
 public abstract class BaseProcessor implements Processor{
     private static final ObjectMap<Element, ObjectMap<Class<? extends Annotation>, Annotation>> annotations = new ObjectMap<>();
 
     public String modName;
     public String packageName;
     public String packageFetch;
-    public SourceVersion srcVersion;
 
     public Filer filer;
     public Messager messager;
@@ -77,12 +76,6 @@ public abstract class BaseProcessor implements Processor{
         if(packageFetch == null){
             throw new IllegalStateException("`fetchPackage` not supplied!");
         }
-
-        String version = env.getOptions().get("compilerVersion");
-        if(version == null){
-            throw new IllegalStateException("`compilerVersion` not supplied!");
-        }
-        srcVersion = SourceVersion.valueOf("RELEASE_" + version);
 
         genStrip = Pattern.compile(packageName.replace(".", "\\.") + "\\.[^A-Z]*");
 
@@ -182,10 +175,6 @@ public abstract class BaseProcessor implements Processor{
         return same(a, b.asType());
     }
 
-    public boolean same(TypeElement a, TypeMirror b){
-        return same(a.asType(), b);
-    }
-
     public boolean same(TypeElement a, TypeElement b){
         return same(a.asType(), b.asType());
     }
@@ -258,10 +247,6 @@ public abstract class BaseProcessor implements Processor{
         return TypeName.get(type);
     }
 
-    public static TypeVariableName spec(TypeVariable type){
-        return TypeVariableName.get(type);
-    }
-
     public static TypeVariableName spec(TypeParameterElement type){
         return TypeVariableName.get(type);
     }
@@ -280,10 +265,6 @@ public abstract class BaseProcessor implements Processor{
 
     public static WildcardTypeName subSpec(TypeName type){
         return WildcardTypeName.subtypeOf(type);
-    }
-
-    public static WildcardTypeName superSpec(TypeName type){
-        return WildcardTypeName.supertypeOf(type);
     }
 
     public static TypeVariableName tvSpec(String name, TypeName... bounds){
@@ -348,7 +329,7 @@ public abstract class BaseProcessor implements Processor{
 
     public String sigName(ExecutableElement e){
         var params = e.getParameters();
-        if(params.size() == 0) return name(e) + "()";
+        if(params.isEmpty()) return name(e) + "()";
 
         var builder = new StringBuilder(name(e))
             .append("(")
@@ -374,7 +355,7 @@ public abstract class BaseProcessor implements Processor{
 
     @Override
     public SourceVersion getSupportedSourceVersion(){
-        return srcVersion;
+        return SourceVersion.RELEASE_17;
     }
 
     @Override
@@ -387,8 +368,7 @@ public abstract class BaseProcessor implements Processor{
         return Set.of(
             "modName",
             "genPackage",
-            "fetchPackage",
-            "compilerVersion"
+            "fetchPackage"
         );
     }
 }

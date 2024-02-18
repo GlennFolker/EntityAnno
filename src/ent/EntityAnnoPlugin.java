@@ -85,7 +85,8 @@ public class EntityAnnoPlugin implements Plugin<Project>{
                                 )
                             ));
                         }
-                        exec.shutdown();
+
+                        Threads.await(exec);
                     });
 
                 while(!fetches.isEmpty()){
@@ -128,7 +129,6 @@ public class EntityAnnoPlugin implements Plugin<Project>{
                 args.arg("genPackage", ext.getGenPackage().get());
                 args.arg("fetchPackage", ext.getFetchPackage().get());
                 args.arg("revisionDir", ext.getRevisionDir().get().getAbsolutePath());
-                args.arg("compilerVersion", JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17);
                 return null;
             });
 

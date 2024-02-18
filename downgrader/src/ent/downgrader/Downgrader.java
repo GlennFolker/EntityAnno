@@ -37,7 +37,7 @@ public final class Downgrader extends AbstractProcessor{
                 SWITCH_EXPRESSION,
                 TEXT_BLOCKS,
                 PATTERN_MATCHING_IN_INSTANCEOF,
-                REIFIABLE_TYPES_INSTANCEOF,
+                REIFIABLE_TYPES_INSTANCEOF
             }) set.invokeExact(feature, Source.JDK8);
         }catch(Throwable t){
             throw new RuntimeException(t);

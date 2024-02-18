@@ -11,14 +11,12 @@ configure(allprojects){
 
     version = 'v146.0.2'
     ext{
-        compilerVersion = JavaVersion.current().ordinal() - JavaVersion.VERSION_17.ordinal() + 17
-
         arc = {String module ->
-            return "com.github.Anuken.Arc$module:$arcVersion"
+            "com.github.Anuken.Arc$module:$arcVersion"
         }
 
         mindustry = {String module ->
-            return "com.github.Anuken.Mindustry$module:$mindustryVersion"
+            "com.github.Anuken.Mindustry$module:$mindustryVersion"
         }
     }
 
@@ -42,15 +40,19 @@ configure(allprojects){
     java{
         withJavadocJar()
         withSourcesJar()
-        toolchain{
-            languageVersion = JavaLanguageVersion.of(compilerVersion)
-        }
     }
 
     tasks.withType(JavaCompile).configureEach{
         options.incremental = true
         options.encoding = 'UTF-8'
         options.compilerArgs << '-Xlint:-options'
+
+        sourceCompatibility = 17
+        targetCompatibility = 8
+
+        doFirst{
+            sourceCompatibility = 8
+        }
     }
 
     tasks.withType(Javadoc).configureEach{
@@ -70,25 +72,9 @@ configure(allprojects){
     }
 }
 
-configure(project(':downgrader')){
-    tasks.withType(JavaCompile).configureEach{
-        sourceCompatibility = 8
-        targetCompatibility = 8
-    }
-}
-
 configure(allprojects - project(':downgrader')){
     dependencies{
         annotationProcessor project(':downgrader')
-    }
-
-    tasks.withType(JavaCompile).configureEach{
-        sourceCompatibility = 17
-        targetCompatibility = 8
-
-        doFirst{
-            sourceCompatibility = 8
-        }
     }
 }
 
