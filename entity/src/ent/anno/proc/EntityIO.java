@@ -50,7 +50,7 @@ public class EntityIO{
         json.setIgnoreUnknownFields(true);
         directory.mkdirs();
 
-        for(Fi fi : directory.list()) revisions.add(json.fromJson(Revision.class, fi));
+        for(Fi fi : directory.list()) revisions.add(json.fromJson(Revision.class, fi).proc(proc));
         revisions.sort(r -> r.version);
 
         int nextRevision = revisions.isEmpty() ? 0 : revisions.max(r -> r.version).version + 1;
@@ -65,7 +65,7 @@ public class EntityIO{
 
         Revision previous = revisions.isEmpty() ? null : revisions.peek();
         if(revisions.isEmpty() || !revisions.peek().equal(fields)){
-            revisions.add(new Revision(nextRevision, fields.map(f -> new RevisionField(f.name, f.type.toString()))));
+            revisions.add(new Revision(nextRevision, fields.map(f -> new RevisionField(f.name, f.type.toString()))).proc(proc));
             Log.warn("Adding new revision @ for @.\nPre = @\nNew = @\n", nextRevision, name, previous == null ? "(none)" : previous.fields.toString(", ", f -> f.name + ":" + f.type), fields.toString(", ", f -> f.name + ":" + f.type.toString()));
 
             directory.child(nextRevision + ".json").writeString(json.toJson(revisions.peek()));
@@ -189,7 +189,7 @@ public class EntityIO{
     }
 
     private void io(String type, String field, boolean network){
-        type = type.replace("unity.gen.", "");
+        type = type.replace(proc.packageName + ".", "");
         type = refactors.get(type, type);
 
         if(isPrimitive(type)){
@@ -290,6 +290,8 @@ public class EntityIO{
         public int version;
         public Seq<RevisionField> fields;
 
+        protected transient BaseProcessor proc;
+
         public Revision(int version, Seq<RevisionField> fields){
             this.version = version;
             this.fields = fields;
@@ -298,14 +300,18 @@ public class EntityIO{
         @SuppressWarnings("unused")
         public Revision(){}
 
+        public Revision proc(BaseProcessor proc){
+            this.proc = proc;
+            return this;
+        }
+
         public boolean equal(Seq<FieldSpec> specs){
             if(fields.size != specs.size) return false;
-
             for(int i = 0; i < fields.size; i++){
                 RevisionField field = fields.get(i);
                 FieldSpec spec = specs.get(i);
-                if(!field.type.replace("unity.gen.", "").equals(
-                    spec.type.toString().replace("unity.gen.", "")
+                if(!field.type.replace(proc.packageName + ".", "").equals(
+                    spec.type.toString().replace(proc.packageName + ".", "")
                 )) return false;
             }
 
