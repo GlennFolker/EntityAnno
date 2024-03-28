@@ -20,22 +20,22 @@ import static javax.lang.model.type.TypeKind.*;
  */
 public class TypeIOResolver{
     public static ClassSerializer resolve(BaseProcessor proc){
-        ClassSerializer out = new ClassSerializer(new ObjectMap<>(), new ObjectMap<>(), new ObjectMap<>(), new ObjectMap<>());
+        var out = new ClassSerializer(new ObjectMap<>(), new ObjectMap<>(), new ObjectMap<>(), new ObjectMap<>());
 
-        Seq<ClassSymbol> handlers = Seq.with(proc.<ClassSymbol>with(TypeIOHandler.class)).add(proc.conv(TypeIO.class));
-        for(ClassSymbol handler : handlers){
-            for(Element e : handler.getEnclosedElements()){
+        var handlers = Seq.with(proc.<ClassSymbol>with(TypeIOHandler.class)).add(proc.conv(TypeIO.class));
+        for(var handler : handlers){
+            for(var e : handler.getEnclosedElements()){
                 if(!(e instanceof MethodSymbol m)) continue;
 
                 if(is(m, PUBLIC, STATIC)){
-                    List<VarSymbol> params = m.params;
+                    var params = m.params;
                     int size = params.size();
 
                     if(size == 0) continue;
                     String sig = fName(handler) + "." + name(m), ret = fixName(m.getReturnType().toString());
 
                     boolean isVoid = m.getReturnType().getKind() == VOID;
-                    Type f = params.get(0).type;
+                    var f = params.get(0).type;
                     ClassSymbol w = proc.conv(Writes.class), r = proc.conv(Reads.class);
 
                     if(size == 2 && proc.same(f, w)){

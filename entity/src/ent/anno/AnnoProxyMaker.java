@@ -6,11 +6,11 @@ import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.code.Type;
 import com.sun.tools.javac.util.*;
 import com.sun.tools.javac.util.List;
-import com.sun.tools.javac.util.Name;
 import sun.reflect.annotation.*;
 
 import javax.lang.model.element.*;
 import javax.lang.model.type.*;
+import java.io.*;
 import java.lang.annotation.*;
 import java.lang.reflect.*;
 import java.util.*;
@@ -40,7 +40,6 @@ public class AnnoProxyMaker{
 
     private Map<String, Object> getAllReflectedValues(){
         Map<String, Object> res = new LinkedHashMap<>();
-
         for(var entry : getAllValues().entrySet()){
             var meth = entry.getKey();
             var value = generateValue(meth, entry.getValue());
@@ -77,18 +76,13 @@ public class AnnoProxyMaker{
                 var scope = cl.members();
                 var getSyms = scope.getClass().getMethod("getSymbols", lookupClass);
                 var it = (Iterable<Symbol>)getSyms.invoke(scope, nonRec);
-                for(Symbol symbol : it){
-                    handleSymbol(symbol, map);
-                }
+                for(var symbol : it) handleSymbol(symbol, map);
             }catch(Throwable death){
                 throw new RuntimeException(death);
             }
         }
 
-        for(var pair : anno.values){
-            map.put(pair.fst, pair.snd);
-        }
-
+        for(var pair : anno.values) map.put(pair.fst, pair.snd);
         return map;
     }
 
@@ -141,20 +135,20 @@ public class AnnoProxyMaker{
 
         @Override
         public void visitArray(Attribute.Array arr){
-            Name name = ((Type.ArrayType)arr.type).elemtype.tsym.getQualifiedName();
-
+            var name = ((Type.ArrayType)arr.type).elemtype.tsym.getQualifiedName();
             if(name.equals(name.table.names.java_lang_Class)){
                 ListBuffer<Type> list = new ListBuffer<>();
                 for(var attrib : arr.values){
-                    Type type = attrib instanceof Attribute.UnresolvedClass ? ((Attribute.UnresolvedClass)attrib).classType :
-                    ((Attribute.Class)attrib).classType;
+                    var type = attrib instanceof Attribute.UnresolvedClass u
+                        ? u.classType
+                        : ((Attribute.Class)attrib).classType;
 
                     list.append(type);
                 }
 
                 value = mirrorProxy(list.toList());
             }else{
-                Class<?> arrType = returnClass;
+                var arrType = returnClass;
                 returnClass = returnClass.getComponentType();
 
                 try{
@@ -205,8 +199,8 @@ public class AnnoProxyMaker{
 
         @Override
         public void visitError(Attribute.Error err){
-            if(err instanceof Attribute.UnresolvedClass){
-                value = mirrorProxy(((Attribute.UnresolvedClass)err).classType);
+            if(err instanceof Attribute.UnresolvedClass u){
+                value = mirrorProxy(u.classType);
             }else{
                 value = null;
             }
@@ -225,14 +219,15 @@ public class AnnoProxyMaker{
         return proxify(() -> new MirroredTypesException(t));
     }
 
-    private static <T extends Throwable> Object proxify(Prov<T> prov){
+    private static <T extends RuntimeException> Object proxify(Prov<T> prov){
         try{
             return new ExceptionProxy(){
+                @Serial
                 private static final long serialVersionUID = 1L;
 
                 @Override
                 protected RuntimeException generateException(){
-                    return (RuntimeException)prov.get();
+                    return prov.get();
                 }
             };
         }catch(Throwable t){

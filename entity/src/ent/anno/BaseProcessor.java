@@ -37,7 +37,7 @@ public abstract class BaseProcessor implements Processor{
     public String packageName;
     public String packageFetch;
 
-    public Filer filer;
+    public JavacFiler filer;
     public Messager messager;
 
     public JavacElements elements;
@@ -63,19 +63,13 @@ public abstract class BaseProcessor implements Processor{
         var context = procEnv.getContext();
 
         modName = env.getOptions().get("modName");
-        if(modName == null){
-            throw new IllegalStateException("`modName` not supplied!");
-        }
+        if(modName == null) throw new IllegalStateException("`modName` not supplied!");
 
         packageName = env.getOptions().get("genPackage");
-        if(packageName == null){
-            throw new IllegalStateException("`genPackage` not supplied!");
-        }
+        if(packageName == null) throw new IllegalStateException("`genPackage` not supplied!");
 
         packageFetch = env.getOptions().get("fetchPackage");
-        if(packageFetch == null){
-            throw new IllegalStateException("`fetchPackage` not supplied!");
-        }
+        if(packageFetch == null) throw new IllegalStateException("`fetchPackage` not supplied!");
 
         genStrip = Pattern.compile(packageName.replace(".", "\\.") + "\\.[^A-Z]*");
 
@@ -93,16 +87,19 @@ public abstract class BaseProcessor implements Processor{
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv){
         this.roundEnv = (JavacRoundEnvironment)roundEnv;
-        if(roundEnv.processingOver()) Log.info("Time taken for @: @s", getClass().getSimpleName(), (Time.millis() - initTime) / 1000f);
-
-        if(round++ >= rounds) return true;
         try{
-            process();
-        }catch(Exception e){
+            while(round < rounds && !filer.newFiles()){
+                ++round;
+                process();
+            }
+        }catch(Throwable e){
+            e = Strings.getFinalCause(e);
+
             Log.err(e);
             throw new RuntimeException(e);
         }
 
+        if(roundEnv.processingOver()) Log.info("Time taken for @: @s", getClass().getSimpleName(), (Time.millis() - initTime) / 1000f);
         return true;
     }
 
@@ -135,20 +132,18 @@ public abstract class BaseProcessor implements Processor{
             }
 
             var object = filer.createSourceFile(file.packageName + "." + file.typeSpec.name, file.typeSpec.originatingElements.toArray(new Element[0]));
-            var stream = object.openWriter();
-            stream.write(result.toString("\n"));
-            stream.close();
+            try(var stream = object.openWriter()){
+                stream.write(result.toString("\n"));
+            }
         }
     }
 
-    public IllegalArgumentException err(String message){
+    public void err(String message){
         messager.printMessage(Kind.ERROR, message);
-        return new IllegalArgumentException(message);
     }
 
-    public IllegalArgumentException err(String message, Element elem){
+    public void err(String message, Element elem){
         messager.printMessage(Kind.ERROR, message, elem);
-        return new IllegalArgumentException(message);
     }
 
     public Seq<String> imports(Element e){
@@ -315,7 +310,7 @@ public abstract class BaseProcessor implements Processor{
         return switch(e.getKind()){
             case FIELD, LOCAL_VARIABLE -> desc((VariableElement)e);
             case METHOD -> desc((ExecutableElement)e);
-            default -> throw err("desc() only accepts variable and method elements.", e);
+            default -> throw new IllegalArgumentException("desc() only accepts variable and method elements: " + e);
         };
     }
 

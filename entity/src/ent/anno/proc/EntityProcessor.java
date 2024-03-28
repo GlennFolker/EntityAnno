@@ -3,13 +3,11 @@ package ent.anno.proc;
 import arc.files.*;
 import arc.func.*;
 import arc.struct.*;
-import arc.struct.ObjectMap.*;
 import arc.util.*;
 import arc.util.pooling.*;
 import arc.util.pooling.Pool.*;
 import com.squareup.javapoet.*;
 import com.sun.tools.javac.code.*;
-import com.sun.tools.javac.code.Attribute.*;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.tree.JCTree.*;
@@ -37,7 +35,7 @@ public class EntityProcessor extends BaseProcessor{
     private static final Seq<MethodSymbol> tmpMethods = new Seq<>();
     private static final Seq<Object> tmpArgs = new Seq<>();
     private static final Comparator<MethodSymbol> methodSorter = Structs.comps(Structs.comparingInt(m -> {
-        MethodPriority priority = anno(m, MethodPriority.class);
+        var priority = anno(m, MethodPriority.class);
         return priority == null ? 0 : priority.value();
     }), Structs.comparing(BaseProcessor::name));
 
@@ -63,7 +61,6 @@ public class EntityProcessor extends BaseProcessor{
 
     protected Seq<EntityDefinition> definitions = new Seq<>();
 
-    // protected ObjectSet<TypeSpec.Builder> baseClassIndexers = new ObjectSet<>();
     protected ClassSerializer serializer;
 
     {
@@ -81,10 +78,8 @@ public class EntityProcessor extends BaseProcessor{
     public synchronized void init(ProcessingEnvironment env){
         super.init(env);
 
-        String dir = env.getOptions().get("revisionDir");
-        if(dir == null){
-            throw new IllegalStateException("`revisionDir` not supplied!");
-        }
+        var dir = env.getOptions().get("revisionDir");
+        if(dir == null) throw new IllegalStateException("`revisionDir` not supplied!");
 
         revDir = Fi.get(dir);
     }
@@ -93,15 +88,15 @@ public class EntityProcessor extends BaseProcessor{
     protected void process() throws IOException{
         switch(round){
             case 1 -> {
-                for(ClassSymbol t : this.<ClassSymbol>with(EntityComponent.class)) comps.put(name(t), t);
-                for(ClassSymbol t : this.<ClassSymbol>with(EntityBaseComponent.class)) baseComps.add(t);
-                for(Symbol s : with(EntityDef.class)) defs.add(s);
-                for(ClassSymbol s : this.<ClassSymbol>with(EntityPoint.class)) pointers.add(s);
+                for(var t : this.<ClassSymbol>with(EntityComponent.class)) comps.put(name(t), t);
+                for(var t : this.<ClassSymbol>with(EntityBaseComponent.class)) baseComps.add(t);
+                for(var s : with(EntityDef.class)) defs.add(s);
+                for(var s : this.<ClassSymbol>with(EntityPoint.class)) pointers.add(s);
 
-                for(MethodSymbol e : this.<MethodSymbol>with(Insert.class)){
-                    if(!e.params.isEmpty()) throw err("All @Insert methods must not have parameters");
+                for(var e : this.<MethodSymbol>with(Insert.class)){
+                    if(!e.params.isEmpty()) err("All @Insert methods must not have parameters");
 
-                    ClassSymbol type = comps.get(name(e.enclClass()));
+                    var type = comps.get(name(e.enclClass()));
                     if(type == null) continue;
 
                     inserters.get(type, () -> {
@@ -111,11 +106,11 @@ public class EntityProcessor extends BaseProcessor{
                     }).get(anno(e, Insert.class).value(), () -> new Seq<>(false)).add(e);
                 }
 
-                for(MethodSymbol e : this.<MethodSymbol>with(Wrap.class)){
-                    if(!e.params.isEmpty()) throw err("All @Wrap methods must not have parameters");
-                    if(e.getReturnType().getKind() != BOOLEAN) throw err("All @Wrap methods must have boolean return type");
+                for(var e : this.<MethodSymbol>with(Wrap.class)){
+                    if(!e.params.isEmpty()) err("All @Wrap methods must not have parameters");
+                    if(e.getReturnType().getKind() != BOOLEAN) err("All @Wrap methods must have boolean return type");
 
-                    ClassSymbol type = comps.get(name(e.enclClass()));
+                    var type = comps.get(name(e.enclClass()));
                     if(type == null) continue;
 
                     wrappers.get(type, () -> {
@@ -140,26 +135,26 @@ public class EntityProcessor extends BaseProcessor{
                     comp(PowerGraphUpdaterc.class), "powerGraph"
                 );
 
-                for(Symbol s : elements.getPackageElement("mindustry.gen").getEnclosedElements()){
-                    String name = name(s);
+                for(var s : elements.getPackageElement("mindustry.gen").getEnclosedElements()){
+                    var name = name(s);
                     if(name.endsWith("c") && s.getKind() == INTERFACE && comp(compName(name)) != null){
                         inters.put(name, (ClassSymbol)s);
                     }
                 }
 
-                for(ClassSymbol comp : comps.values()){
-                    for(Symbol s : comp.getEnclosedElements()){
+                for(var comp : comps.values()){
+                    for(var s : comp.getEnclosedElements()){
                         if(s.getKind() == FIELD){
-                            JCVariableDecl tree = (JCVariableDecl)trees.getTree(s);
+                            var tree = (JCVariableDecl)trees.getTree(s);
                             if(tree == null) continue;
 
-                            JCExpression init = tree.init;
+                            var init = tree.init;
                             if(init != null) varInitializers.put(desc(s), init);
                         }else if(s.getKind() == METHOD && s.getKind() != CONSTRUCTOR){
-                            MethodSymbol m = (MethodSymbol)s;
+                            var m = (MethodSymbol)s;
                             if(isAny(m, ABSTRACT, NATIVE)) continue;
 
-                            JCMethodDecl tree = trees.getTree(m);
+                            var tree = trees.getTree(m);
                             if(tree == null) continue;
 
                             methodBlocks.put(desc(m), tree.body);
@@ -167,11 +162,11 @@ public class EntityProcessor extends BaseProcessor{
                     }
 
                     imports.put(comp, imports(comp));
-                    Seq<ClassSymbol> deps = dependencies(comp);
+                    var deps = dependencies(comp);
 
-                    EntityComponent compAnno = anno(comp, EntityComponent.class);
+                    var compAnno = anno(comp, EntityComponent.class);
                     if(!compAnno.vanilla()){
-                        TypeSpec.Builder intBuilder = TypeSpec.interfaceBuilder(intName(comp))
+                        var intBuilder = TypeSpec.interfaceBuilder(intName(comp))
                             .addOriginatingElement(comp)
                             .addModifiers(PUBLIC, ABSTRACT)
                             .addAnnotation(spec(EntityInterface.class))
@@ -181,53 +176,53 @@ public class EntityProcessor extends BaseProcessor{
                                 .build()
                             );
 
-                        for(Type ext : comp.getInterfaces()) if(!isCompInter(conv(ext))) intBuilder.addSuperinterface(spec(ext));
-                        for(ClassSymbol dep : deps) intBuilder.addSuperinterface(procName(dep, this::intName));
+                        for(var ext : comp.getInterfaces()) if(!isCompInter(conv(ext))) intBuilder.addSuperinterface(spec(ext));
+                        for(var dep : deps) intBuilder.addSuperinterface(procName(dep, this::intName));
 
                         ObjectSet<String> signatures = new ObjectSet<>();
-                        for(Symbol s : comp.getEnclosedElements()){
+                        for(var s : comp.getEnclosedElements()){
                             if(isAny(s, PRIVATE, STATIC) || s.getKind() != METHOD) continue;
-                            MethodSymbol e = (MethodSymbol)s;
+                            var e = (MethodSymbol)s;
 
                             signatures.add(sigName(e));
                             if(anno(e, Override.class) == null){
-                                MethodSpec.Builder methBuilder = MethodSpec.methodBuilder(name(e))
+                                var methBuilder = MethodSpec.methodBuilder(name(e))
                                     .addModifiers(PUBLIC, ABSTRACT)
                                     .returns(spec(e.getReturnType()));
 
-                                for(TypeVariableSymbol t : e.getTypeParameters()) methBuilder.addTypeVariable(spec(t));
-                                for(Type t : e.getThrownTypes()) methBuilder.addException(spec(t));
-                                for(VarSymbol v : e.getParameters()) methBuilder.addParameter(spec(v));
+                                for(var t : e.getTypeParameters()) methBuilder.addTypeVariable(spec(t));
+                                for(var t : e.getThrownTypes()) methBuilder.addException(spec(t));
+                                for(var v : e.getParameters()) methBuilder.addParameter(spec(v));
                                 intBuilder.addMethod(methBuilder.build());
                             }
                         }
-                        for(Symbol s : comp.getEnclosedElements()){
+                        for(var s : comp.getEnclosedElements()){
                             if(isAny(s, PRIVATE, STATIC) || s.getKind() != FIELD || anno(s, Import.class) != null) continue;
-                            VarSymbol v = (VarSymbol)s;
-                            String name = name(v);
+                            var v = (VarSymbol)s;
+                            var name = name(v);
 
                             if(!signatures.contains(name + "()")){
-                                MethodSpec.Builder getter = MethodSpec.methodBuilder(name)
+                                var getter = MethodSpec.methodBuilder(name)
                                     .addModifiers(PUBLIC, ABSTRACT)
                                     .returns(spec(v.type));
 
-                                for(Compound anno : v.getAnnotationMirrors()){
-                                    String aname = name(anno.type.tsym);
-                                    if(aname.contains("Null") || aname.contains("Deprecated")) getter.addAnnotation(spec((TypeElement)anno.type.tsym));
+                                for(var anno : v.getAnnotationMirrors()){
+                                    var aname = name(anno.type.tsym);
+                                    if(aname.contains("Null") || aname.contains("Deprecated")) getter.addAnnotation(spec((ClassSymbol)anno.type.tsym));
                                 }
 
                                 intBuilder.addMethod(getter.build());
                             }
 
                             if(!is(v, FINAL) && anno(v, ReadOnly.class) == null && !signatures.contains(name + "(" + v.type + ")")){
-                                MethodSpec.Builder setter = MethodSpec.methodBuilder(name)
+                                var setter = MethodSpec.methodBuilder(name)
                                     .addModifiers(PUBLIC, ABSTRACT)
                                     .returns(TypeName.VOID);
 
-                                ParameterSpec.Builder param = ParameterSpec.builder(spec(v.type), name(v));
-                                for(Compound anno : v.getAnnotationMirrors()){
-                                    String aname = name(anno.type.tsym);
-                                    if(aname.contains("Null") || aname.contains("Deprecated")) param.addAnnotation(spec((TypeElement)anno.type.tsym));
+                                var param = ParameterSpec.builder(spec(v.type), name(v));
+                                for(var anno : v.getAnnotationMirrors()){
+                                    var aname = name(anno.type.tsym);
+                                    if(aname.contains("Null") || aname.contains("Deprecated")) param.addAnnotation(spec((ClassSymbol)anno.type.tsym));
                                 }
 
                                 intBuilder.addMethod(setter.addParameter(param.build()).build());
@@ -236,27 +231,26 @@ public class EntityProcessor extends BaseProcessor{
 
                         write(intBuilder, imports.get(comp));
                         if(compAnno.base()){
-                            Seq<ClassSymbol> baseDeps = deps.copy().add(comp);
+                            var baseDeps = deps.copy().add(comp);
                             baseDependencies.get(comp, ObjectSet::new).addAll(baseDeps);
 
                             if(anno(comp, EntityDef.class) == null){
-                                String tname = baseName(comp);
-
-                                TypeSpec.Builder base = TypeSpec.classBuilder(tname)
+                                var tname = baseName(comp);
+                                var base = TypeSpec.classBuilder(tname)
                                     .addModifiers(PUBLIC, ABSTRACT)
                                     .addOriginatingElement(comp);
 
-                                for(ClassSymbol dep : baseDeps){
-                                    for(Symbol s : dep.getEnclosedElements()){
+                                for(var dep : baseDeps){
+                                    for(var s : dep.getEnclosedElements()){
                                         if(s.getKind() == FIELD && !isAny(s, PRIVATE, STATIC) && anno(s, Import.class) == null && anno(s, ReadOnly.class) == null){
-                                            VarSymbol v = (VarSymbol)s;
-                                            FieldSpec.Builder field = FieldSpec.builder(spec(v.type), name(v), PUBLIC);
+                                            var v = (VarSymbol)s;
+                                            var field = FieldSpec.builder(spec(v.type), name(v), PUBLIC);
 
                                             if(is(v, TRANSIENT)) field.addModifiers(TRANSIENT);
                                             if(is(v, VOLATILE)) field.addModifiers(VOLATILE);
-                                            for(Compound anno : v.getAnnotationMirrors()) field.addAnnotation(spec(anno));
+                                            for(var anno : v.getAnnotationMirrors()) field.addAnnotation(spec(anno));
 
-                                            JCExpression init = varInitializers.get(desc(v));
+                                            var init = varInitializers.get(desc(v));
                                             if(init != null) field.initializer(init.toString());
 
                                             base.addField(field.build());
@@ -270,19 +264,19 @@ public class EntityProcessor extends BaseProcessor{
                             }
                         }
                     }else if(compAnno.base()){
-                        ObjectSet<ClassSymbol> baseDeps = baseDependencies.get(comp, ObjectSet::new);
+                        var baseDeps = baseDependencies.get(comp, ObjectSet::new);
                         baseDeps.add(comp);
                         baseDeps.addAll(deps);
 
-                        String name = baseName(comp);
-                        ClassSymbol base = elements.getTypeElement("mindustry.gen." + name);
+                        var name = baseName(comp);
+                        var base = elements.getTypeElement("mindustry.gen." + name);
                         if(base != null) baseClassTypes.put(name, base);
                     }
                 }
             }
 
             case 2 -> {
-                for(ClassSymbol t : this.<ClassSymbol>with(EntityInterface.class)) inters.put(name(t), t);
+                for(var t : this.<ClassSymbol>with(EntityInterface.class)) inters.put(name(t), t);
 
                 OrderedSet<String> registers = new OrderedSet<>();
                 registers.orderedItems().ordered = false;
@@ -307,59 +301,56 @@ public class EntityProcessor extends BaseProcessor{
                 OrderedSet<MethodSymbol> standaloneInserts = new OrderedSet<>(), standaloneWraps = new OrderedSet<>();
 
                 ObjectSet<MethodSymbol> removal = new ObjectSet<>();
-                for(Symbol def : defs){
-                    EntityDef defAnno = anno(def, EntityDef.class);
+                for(var def : defs){
+                    var defAnno = anno(def, EntityDef.class);
 
                     defComps.clear();
-                    for(ClassSymbol comp : types(defAnno::value)){
-                        String name = name(comp);
+                    for(var comp : types(defAnno::value)){
+                        var name = name(comp);
 
-                        ClassSymbol inter = inter(name);
+                        var inter = inter(name);
                         if(inter != null) defComps.put(compName(name), comp(inter));
                     }
 
                     if(defComps.isEmpty()) continue;
 
                     ClassSymbol baseClassType = null;
-                    for(ClassSymbol comp : defComps.values()){
+                    for(var comp : defComps.values()){
                         if(anno(comp, EntityComponent.class).base()){
                             if(baseClassType == null){
                                 baseClassType = comp;
                             }else{
-                                throw err("Can't have more than one base classes.", def);
+                                err("Can't have more than one base classes.", def);
+                                break;
                             }
                         }
                     }
 
-                    /*TypeSpec.Builder baseClassBuilder = baseClassType == null
-                        ? null
-                        : baseClasses.get(baseName(baseClassType));
-                    boolean addIndexToBase = baseClassBuilder != null && baseClassIndexers.add(baseClassBuilder);*/
                     boolean typeIsBase = baseClassType != null && anno(def, EntityComponent.class) != null && anno(def, EntityComponent.class).base();
-                    String name = def instanceof ClassSymbol ? baseName(name(def)) : createName(defComps);
+                    var name = def instanceof ClassSymbol ? baseName(name(def)) : createName(defComps);
 
                     if(!typeIsBase && baseClassType != null && name.equals(baseName(baseClassType))) name += "Entity";
                     if(!registers.add(name)) continue;
 
                     defCompsResolve.clear();
-                    for(ClassSymbol comp : defComps.values()) for(ClassSymbol dep : dependencies(comp)) defCompsResolve.put(name(dep), dep);
+                    for(var comp : defComps.values()) for(var dep : dependencies(comp)) defCompsResolve.put(name(dep), dep);
                     defComps.putAll(defCompsResolve);
 
                     defGroups.clear();
                     excludeGroups.clear();
-                    for(ClassSymbol comp : defComps.values()){
-                        ExcludeGroups ex = anno(comp, ExcludeGroups.class);
+                    for(var comp : defComps.values()){
+                        var ex = anno(comp, ExcludeGroups.class);
                         if(ex != null){
-                            for(ClassSymbol i : types(ex::value)){
-                                ClassSymbol t = comp(i);
+                            for(var i : types(ex::value)){
+                                var t = comp(i);
                                 if(t != null) excludeGroups.add(t);
                             }
                         }
                     }
 
-                    for(ClassSymbol comp : defComps.values()) if(!excludeGroups.contains(comp) && groups.containsKey(comp)) defGroups.add(groups.get(comp));
+                    for(var comp : defComps.values()) if(!excludeGroups.contains(comp) && groups.containsKey(comp)) defGroups.add(groups.get(comp));
 
-                    TypeSpec.Builder builder = TypeSpec.classBuilder(name)
+                    var builder = TypeSpec.classBuilder(name)
                         .addModifiers(PUBLIC)
                         .addAnnotation(
                             AnnotationSpec.builder(SuppressWarnings.class)
@@ -367,7 +358,7 @@ public class EntityProcessor extends BaseProcessor{
                             .build()
                         );
 
-                    for(ClassSymbol comp : defComps.values()) builder.addOriginatingElement(comp);
+                    for(var comp : defComps.values()) builder.addOriginatingElement(comp);
 
                     methods.clear();
                     specVariables.clear();
@@ -381,22 +372,25 @@ public class EntityProcessor extends BaseProcessor{
                     allWrappers.clear();
 
                     boolean isSync = defComps.containsKey("SyncComp");
-                    for(ClassSymbol comp : defComps.values()){
-                        OrderedMap<String, Seq<MethodSymbol>> tmp = inserters.get(comp);
-                        if(tmp != null) for(String key : tmp.orderedKeys()) allInserters.get(key, Seq::new).addAll(tmp.get(key));
+                    for(var comp : defComps.values()){
+                        var tmp = inserters.get(comp);
+                        if(tmp != null) for(var key : tmp.orderedKeys()) allInserters.get(key, Seq::new).addAll(tmp.get(key));
 
                         tmp = wrappers.get(comp);
-                        if(tmp != null) for(String key : tmp.orderedKeys()) allWrappers.get(key, Seq::new).addAll(tmp.get(key));
+                        if(tmp != null) for(var key : tmp.orderedKeys()) allWrappers.get(key, Seq::new).addAll(tmp.get(key));
 
                         boolean isShadowed = baseClassType != null && !typeIsBase && baseDependencies.get(baseClassType).contains(comp);
-                        for(Symbol s : comp.getEnclosedElements()){
+                        for(var s : comp.getEnclosedElements()){
                             if(s.getKind() == FIELD && anno(s, Import.class) == null){
-                                VarSymbol v = (VarSymbol)s;
+                                var v = (VarSymbol)s;
 
-                                String fname = name(v);
-                                if(!usedFields.add(fname)) throw err("Duplicate field names: '" + fname + "'.", def);
+                                var fname = name(v);
+                                if(!usedFields.add(fname)){
+                                    err("Duplicate field names: '" + fname + "'.", def);
+                                    continue;
+                                }
 
-                                FieldSpec.Builder field = FieldSpec.builder(spec(v.type), fname);
+                                var field = FieldSpec.builder(spec(v.type), fname);
                                 if(is(v, STATIC)){
                                     field.addModifiers(STATIC);
                                     if(is(v, FINAL)) field.addModifiers(FINAL);
@@ -412,11 +406,11 @@ public class EntityProcessor extends BaseProcessor{
                                     field.addModifiers(PUBLIC);
                                 }
 
-                                JCExpression init = varInitializers.get(desc(v));
+                                var init = varInitializers.get(desc(v));
                                 if(init != null) field.initializer(init.toString());
 
-                                for(Compound anno : v.getAnnotationMirrors()) field.addAnnotation(spec(anno));
-                                FieldSpec spec = field.build();
+                                for(var anno : v.getAnnotationMirrors()) field.addAnnotation(spec(anno));
+                                var spec = field.build();
 
                                 boolean isVisible = !isAny(v, STATIC, PRIVATE) && anno(v, ReadOnly.class) == null;
                                 if(!isShadowed || !isVisible) builder.addField(spec);
@@ -426,14 +420,17 @@ public class EntityProcessor extends BaseProcessor{
                                 allFields.add(v);
 
                                 if(isSync && anno(v, SyncField.class) != null){
-                                    if(v.type.getKind() != FLOAT) throw err("All @SyncFields must be float.", def);
+                                    if(v.type.getKind() != FLOAT){
+                                        err("All @SyncFields must be float.", def);
+                                        continue;
+                                    }
 
                                     syncedFields.add(v);
                                     builder.addField(FieldSpec.builder(TypeName.FLOAT, fname + EntityIO.targetSuffix, TRANSIENT, PRIVATE).build());
                                     builder.addField(FieldSpec.builder(TypeName.FLOAT, fname + EntityIO.lastSuffix, TRANSIENT, PRIVATE).build());
                                 }
                             }else if(s.getKind() == METHOD){
-                                MethodSymbol m = (MethodSymbol)s;
+                                var m = (MethodSymbol)s;
                                 methods.get(sigName(m), Seq::new).add(m);
                             }
                         }
@@ -450,40 +447,24 @@ public class EntityProcessor extends BaseProcessor{
                         );
                     }
 
-                    EntityIO io = new EntityIO(this, name, builder, allFieldSpecs, serializer, revDir.child(name));
+                    var io = new EntityIO(this, name, builder, allFieldSpecs, serializer, revDir.child(name));
                     boolean hasIO = defAnno.genIO() && (isSync || defAnno.serialize());
 
-                    /*if(baseClassBuilder == null || addIndexToBase){
-                        TypeSpec.Builder indexBuilder = baseClassBuilder == null ? builder : baseClassBuilder;
-                        for(String group : defGroups){
-                            indexBuilder
-                                .addSuperinterface(ClassName.get("mindustry.gen", "IndexableEntity__" + group))
-                                .addMethod(
-                                    MethodSpec.methodBuilder("setIndex__" + group)
-                                        .addAnnotation(spec(Override.class))
-                                        .addParameter(ClassName.INT, "index")
-                                        .addModifiers(PUBLIC)
-                                        .addStatement("index__$L = index", group)
-                                    .build()
-                                );
-                        }
-                    }*/
-
                     boolean serializeOverride = false;
-                    for(Entry<String, Seq<MethodSymbol>> entry : methods.entries()){
-                        String key = entry.key;
-                        Seq<MethodSymbol> entries = entry.value;
+                    for(var entry : methods.entries()){
+                        var key = entry.key;
+                        var entries = entry.value;
 
-                        VarSymbol setter = allFields.find(v -> {
-                            MethodSymbol first = entries.first();
+                        var setter = allFields.find(v -> {
+                            var first = entries.first();
                             return
                                 name(v).equals(name(first)) &&
                                 first.getParameters().size() == 1 && same(first.getParameters().get(0).type, v.type) &&
                                 first.getReturnType().getKind() == VOID;
                         });
 
-                        MethodSymbol topReplacer = entries.max(m -> {
-                            Replace rep = anno(m, Replace.class);
+                        var topReplacer = entries.max(m -> {
+                            var rep = anno(m, Replace.class);
                             return rep == null ? -1 : rep.value();
                         });
 
@@ -494,14 +475,17 @@ public class EntityProcessor extends BaseProcessor{
                             int max = topReplace.value();
                             if(topReplacer.getReturnType().getKind() == VOID){
                                 entries.removeAll(m -> {
-                                    Replace rep = anno(m, Replace.class);
+                                    var rep = anno(m, Replace.class);
                                     return rep == null || rep.value() != max;
                                 });
                             }else{
                                 if(entries.count(m -> {
-                                    Replace rep = anno(m, Replace.class);
+                                    var rep = anno(m, Replace.class);
                                     return rep != null && rep.value() == max;
-                                }) > 1) throw err("Type " + name + " has multiple components replacing non-void method " + key + " with similar priorities.", def);
+                                }) > 1){
+                                    err("Type " + name + " has multiple components replacing non-void method " + key + " with similar priorities.", def);
+                                    continue;
+                                }
 
                                 entries.clear();
                                 entries.add(topReplacer);
@@ -509,61 +493,73 @@ public class EntityProcessor extends BaseProcessor{
                         }
 
                         removal.clear();
-                        for(MethodSymbol m : entries){
-                            Remove rem = anno(m, Remove.class);
+                        for(var m : entries){
+                            var rem = anno(m, Remove.class);
                             if(rem != null){
-                                if(removal.contains(m)) throw err(sigName(m) + " is already @Remove-d by another method.", def);
+                                if(removal.contains(m)){
+                                    err(sigName(m) + " is already @Remove-d by another method.", def);
+                                    continue;
+                                }
 
-                                ClassSymbol comp = comp(type(rem::value));
+                                var comp = comp(type(rem::value));
                                 if(setter != null && same(setter.enclClass(), comp)){
                                     setter = null;
                                 }
 
-                                MethodSymbol removed = entries.find(e -> same(e.enclClass(), comp));
+                                var removed = entries.find(e -> same(e.enclClass(), comp));
                                 if(removed != null) removal.add(removed);
                             }
                         }
 
-                        Iterator<MethodSymbol> it = entries.iterator();
+                        var it = entries.iterator();
                         while(it.hasNext()) if(removal.contains(it.next())) it.remove();
 
                         if(entries.count(m -> !isAny(m, ABSTRACT, NATIVE) && m.getReturnType().getKind() != VOID) > 1){
-                            throw err("Type " + name + " has multiple components implementing non-void method " + entry.key + ".", def);
+                            err("Type " + name + " has multiple components implementing non-void method " + entry.key + ".", def);
+                            continue;
                         }
 
                         entries.sort(methodSorter);
 
-                        MethodSymbol m = entries.first();
-                        String mname = name(m);
+                        var m = entries.first();
+                        var mname = name(m);
 
-                        if(entries.size > 1 && mname.equals("serialize") && m.getReturnType().getKind() == BOOLEAN && m.params.size() == 0){
+                        if(entries.size > 1 && mname.equals("serialize") && m.getReturnType().getKind() == BOOLEAN && m.params.isEmpty()){
                             serializeOverride = true;
                         }else if(anno(m, InternalImpl.class) != null){
                             continue;
                         }
 
                         boolean isPrivate = is(m, PRIVATE);
-                        MethodSpec.Builder methBuilder = MethodSpec.methodBuilder(mname)
+                        var methBuilder = MethodSpec.methodBuilder(mname)
                             .addModifiers(isPrivate ? PRIVATE : PUBLIC)
                             .returns(spec(m.getReturnType()));
 
                         if(!isPrivate && !is(m, STATIC)) methBuilder.addAnnotation(spec(Override.class));
                         if(is(m, STATIC)) methBuilder.addModifiers(STATIC);
 
-                        for(TypeVariableSymbol t : m.getTypeParameters()) methBuilder.addTypeVariable(spec(t));
-                        for(Type t : m.getThrownTypes()) methBuilder.addException(spec(t));
-                        for(VarSymbol v : m.params) methBuilder.addParameter(spec(v));
+                        for(var t : m.getTypeParameters()) methBuilder.addTypeVariable(spec(t));
+                        for(var t : m.getThrownTypes()) methBuilder.addException(spec(t));
+                        for(var v : m.params) methBuilder.addParameter(spec(v));
 
                         boolean writeBlock = m.getReturnType().getKind() == VOID && entries.size > 1;
                         if(isAny(m, ABSTRACT, NATIVE) && entries.size == 1 && anno(m, InternalImpl.class) == null){
-                            throw err(desc(m) + " is an abstract method and must be implemented in some component.", def);
+                            err(desc(m) + " is an abstract method and must be implemented in some component.", def);
+                            continue;
                         }
 
                         inserts.set(allInserters.get(key, inserts.clear()));
                         wraps.set(allWrappers.get(key, wraps.clear()));
                         if(m.getReturnType().getKind() != VOID){
-                            if(!inserts.isEmpty()) throw err("Method " + sigName(m) + " is not void; no methods can @Insert to it.", def);
-                            if(!wraps.isEmpty()) throw err("Method " + sigName(m) + " is not void; no methods can @Wrap it.", def);
+                            if(!inserts.isEmpty()){
+                                err("Method " + sigName(m) + " is not void; no methods can @Insert to it.", def);
+                                continue;
+                            }
+
+                            if(!wraps.isEmpty()){
+                                err("Method " + sigName(m) + " is not void; no methods can @Wrap it.", def);
+                                continue;
+                            }
                         }
 
                         standaloneInserts.clear();
@@ -571,7 +567,7 @@ public class EntityProcessor extends BaseProcessor{
 
                         it = inserts.iterator();
                         while(it.hasNext()){
-                            MethodSymbol next = it.next();
+                            var next = it.next();
                             if(same(type(anno(next, Insert.class)::block), conv(Void.class))){
                                 it.remove();
                                 standaloneInserts.add(next);
@@ -580,7 +576,7 @@ public class EntityProcessor extends BaseProcessor{
 
                         it = wraps.iterator();
                         while(it.hasNext()){
-                            MethodSymbol next = it.next();
+                            var next = it.next();
                             if(same(type(anno(next, Wrap.class)::block), conv(Void.class))){
                                 it.remove();
                                 standaloneWraps.add(next);
@@ -599,32 +595,28 @@ public class EntityProcessor extends BaseProcessor{
 
                             bypass.sort(methodSorter);
 
-                            Seq<MethodSymbol> priorBypass = tmpMethods.selectFrom(standaloneInserts.orderedItems(), e -> !anno(e, Insert.class).after() && anno(e, BypassGroupCheck.class) != null);
+                            var priorBypass = tmpMethods.selectFrom(standaloneInserts.orderedItems(), e -> !anno(e, Insert.class).after() && anno(e, BypassGroupCheck.class) != null);
                             if(priorBypass.any()){
                                 standaloneInserts.removeAll(priorBypass);
-                                for(MethodSymbol e : priorBypass) methBuilder.addStatement("this.$L()", name(e));
+                                for(var e : priorBypass) methBuilder.addStatement("this.$L()", name(e));
                             }
 
                             append(methBuilder, defComps.values(), bypass, inserts, wraps, writeBlock, null);
 
                             methBuilder.addStatement("if($Ladded) return", mname.equals("add") ? "" : "!");
-                            for(String group : defGroups){
+                            for(var group : defGroups){
                                 if(isAdd){
                                     methBuilder.addStatement("$T.$L.add(this)", spec(Groups.class), group);
-                                    //methBuilder.addStatement("index__$L = $T.$L.addIndex(this)", group, spec(Groups.class), group);
                                 }else{
                                     methBuilder.addStatement("$T.$L.remove(this)", spec(Groups.class), group);
-                                    /*methBuilder
-                                        .addStatement("$T.$L.removeIndex(this, index__$L)", spec(Groups.class), group, group)
-                                        .addStatement("index__$L = -1", group);*/
                                 }
                             }
                         }
 
                         if(!standaloneWraps.isEmpty()){
-                            Seq<MethodSymbol> arr = standaloneWraps.orderedItems();
+                            var arr = standaloneWraps.orderedItems();
 
-                            StringBuilder format = new StringBuilder("if(this.$L()");
+                            var format = new StringBuilder("if(this.$L()");
                             tmpArgs.clear().add(name(arr.first()));
 
                             for(int i = 1; i < arr.size; i++){
@@ -635,7 +627,7 @@ public class EntityProcessor extends BaseProcessor{
                             methBuilder.beginControlFlow(format.append(")").toString(), tmpArgs.toArray());
                         }
 
-                        for(MethodSymbol e : standaloneInserts) if(!anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+                        for(var e : standaloneInserts) if(!anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
 
                         allFields.sortComparing(BaseProcessor::name);
                         syncedFields.sortComparing(BaseProcessor::name);
@@ -660,7 +652,7 @@ public class EntityProcessor extends BaseProcessor{
                             if(mname.equals("snapSync")){
                                 methBuilder.addStatement("updateSpacing = 16");
                                 methBuilder.addStatement("lastUpdated = $T.millis()", Time.class);
-                                for(VarSymbol v : syncedFields){
+                                for(var v : syncedFields){
                                     methBuilder.addStatement("$L = $L", name(v) + EntityIO.lastSuffix, name(v) + EntityIO.targetSuffix);
                                     methBuilder.addStatement("$L = $L", name(v), name(v) + EntityIO.targetSuffix);
                                 }
@@ -669,7 +661,7 @@ public class EntityProcessor extends BaseProcessor{
                             if(mname.equals("snapInterpolation")){
                                 methBuilder.addStatement("updateSpacing = 16");
                                 methBuilder.addStatement("lastUpdated = $T.millis()", Time.class);
-                                for(VarSymbol v : syncedFields){
+                                for(var v : syncedFields){
                                     methBuilder.addStatement("$L = $L", name(v) + EntityIO.lastSuffix, name(v));
                                     methBuilder.addStatement("$L = $L", name(v) + EntityIO.targetSuffix, name(v));
                                 }
@@ -678,7 +670,7 @@ public class EntityProcessor extends BaseProcessor{
 
                         append(methBuilder, defComps.values(), entries, inserts, wraps, writeBlock, setter);
 
-                        for(MethodSymbol e : standaloneInserts) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+                        for(var e : standaloneInserts) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
                         if(defAnno.pooled() && mname.equals("remove")) methBuilder.addStatement("$T.queueFree(this)", spec(Groups.class));
 
                         if(!standaloneWraps.isEmpty()) methBuilder.endControlFlow();
@@ -698,16 +690,16 @@ public class EntityProcessor extends BaseProcessor{
                     if(defAnno.pooled()){
                         builder.addSuperinterface(spec(Poolable.class));
 
-                        MethodSpec.Builder resetBuilder = MethodSpec.methodBuilder("reset")
+                        var resetBuilder = MethodSpec.methodBuilder("reset")
                             .addModifiers(PUBLIC)
                             .addAnnotation(spec(Override.class));
 
                         allFieldSpecs.sortComparing(s -> s.name);
-                        for(FieldSpec spec : allFieldSpecs){
-                            VarSymbol v = specVariables.get(spec);
+                        for(var spec : allFieldSpecs){
+                            var v = specVariables.get(spec);
                             if(v == null || isAny(v, STATIC, FINAL)) continue;
 
-                            String desc = desc(v);
+                            var desc = desc(v);
                             resetBuilder.addStatement("this.$L = $L", spec.name, varInitializers.containsKey(desc)
                                 ? varInitializers.get(desc)
                                 : spec.type.isPrimitive() ? getDefault(spec.type.toString()) : "null"
@@ -717,7 +709,7 @@ public class EntityProcessor extends BaseProcessor{
                         builder.addMethod(resetBuilder.build());
                     }
 
-                    MethodSpec.Builder creator = MethodSpec.methodBuilder("create")
+                    var creator = MethodSpec.methodBuilder("create")
                         .addModifiers(PUBLIC, STATIC)
                         .returns(ClassName.get(packageName, name));
 
@@ -731,21 +723,10 @@ public class EntityProcessor extends BaseProcessor{
                         .addMethod(MethodSpec.constructorBuilder().addModifiers(PROTECTED).build())
                         .addMethod(creator.build());
 
-                    /*if(baseClassBuilder == null || addIndexToBase){
-                        TypeSpec.Builder fieldBuilder = baseClassBuilder == null ? builder : baseClassBuilder;
-                        for(String group : defGroups){
-                            fieldBuilder.addField(
-                                FieldSpec.builder(ClassName.INT, "index__" + group, PROTECTED, TRANSIENT)
-                                    .initializer("-1")
-                                .build()
-                            );
-                        }
-                    }*/
-
                     definitions.add(new EntityDefinition(name, builder, def, typeIsBase ? null : baseClassType, defComps.values().toSeq(), allFieldSpecs.copy()));
                 }
 
-                TypeSpec.Builder registry = TypeSpec.classBuilder("EntityRegistry")
+                var registry = TypeSpec.classBuilder("EntityRegistry")
                     .addModifiers(PUBLIC, FINAL)
                     .addAnnotation(
                         AnnotationSpec.builder(spec(SuppressWarnings.class))
@@ -833,27 +814,27 @@ public class EntityProcessor extends BaseProcessor{
                         .build()
                     );
 
-                MethodSpec.Builder register = MethodSpec.methodBuilder("register")
+                var register = MethodSpec.methodBuilder("register")
                     .addModifiers(PUBLIC, STATIC)
                     .returns(TypeName.VOID);
 
                 pointers.sort(Structs.comparing(BaseProcessor::fName));
-                for(ClassSymbol point : pointers){
+                for(var point : pointers){
                     registry.addOriginatingElement(point);
 
-                    ClassName name = ClassName.get(point);
-                    register.addStatement("register($S, $T.class, $T::new)", name.canonicalName(), name, name);
+                    var name = ClassName.get(point);
+                    register.addStatement("register($S, $T.class, $T::create)", name.canonicalName(), name, name);
                 }
 
                 definitions.sort(Structs.comparing(def -> def.name));
                 definitions.flatMap(def -> def.components).distinct().each(registry::addOriginatingElement);
 
                 Seq<String> imports = new Seq<>();
-                for(EntityDefinition def : definitions){
+                for(var def : definitions){
                     imports.clear();
 
-                    ClassName name = ClassName.get(packageName, def.name);
-                    register.addStatement("register($S, $T.class, $T::new)", name.canonicalName(), name, name);
+                    var name = ClassName.get(packageName, def.name);
+                    register.addStatement("register($S, $T.class, $T::create)", name.canonicalName(), name, name);
 
                     def.builder.addMethod(
                         MethodSpec.methodBuilder("classId")
@@ -870,29 +851,32 @@ public class EntityProcessor extends BaseProcessor{
                         def.builder.superclass(spec(ext));
                     }
 
-                    ObjectSet<String> methodNames = def.components.flatMap(t -> {
+                    var methodNames = def.components.flatMap(t -> {
                         Seq<String> out = new Seq<>();
-                        for(Symbol s : t.getEnclosedElements()) if(s.getKind() == METHOD) out.add(sigName((MethodSymbol)s));
+                        for(var s : t.getEnclosedElements()) if(s.getKind() == METHOD) out.add(sigName((MethodSymbol)s));
 
                         return out;
-                    }).<String>as().asSet();
+                    }).asSet();
 
                     TypeSpec.Builder superclass = null;
                     if(ext != null) superclass = baseClasses.get(name(ext));
 
-                    for(ClassSymbol comp : def.components){
+                    for(var comp : def.components){
                         imports.addAll(this.imports.get(comp));
 
-                        ClassSymbol inter = inter(comp);
-                        if(inter == null) throw err("Failed to implement for '" + comp + "'", def.naming);
+                        var inter = inter(comp);
+                        if(inter == null){
+                            err("Failed to implement for '" + comp + "'", def.naming);
+                            continue;
+                        }
 
                         def.builder.addSuperinterface(spec(inter));
-                        for(Symbol s : inter.getEnclosedElements()){
+                        for(var s : inter.getEnclosedElements()){
                             if(s.getKind() == METHOD){
-                                MethodSymbol m = (MethodSymbol)s;
+                                var m = (MethodSymbol)s;
 
-                                String var = name(m);
-                                FieldSpec field = def.fieldSpecs.find(f -> f.name.equals(var));
+                                var var = name(m);
+                                var field = def.fieldSpecs.find(f -> f.name.equals(var));
                                 if(field == null || methodNames.contains(sigName(m))) continue;
 
                                 MethodSpec result = null;
@@ -915,25 +899,25 @@ public class EntityProcessor extends BaseProcessor{
 
                                 if(result != null){
                                     if(superclass != null){
-                                        FieldSpec superField = Seq.with(superclass.fieldSpecs).find(f -> f.name.equals(var));
+                                        var superField = Seq.with(superclass.fieldSpecs).find(f -> f.name.equals(var));
                                         if(superField != null){
-                                            TypeName ret = result.returnType;
-                                            MethodSpec targetMethod = Seq.with(superclass.methodSpecs).find(e -> e.name.equals(var) && e.returnType.equals(ret));
+                                            var ret = result.returnType;
+                                            var targetMethod = Seq.with(superclass.methodSpecs).find(e -> e.name.equals(var) && e.returnType.equals(ret));
 
                                             if(targetMethod == null) superclass.addMethod(result);
                                             continue;
                                         }
                                     }else if(ext != null){
                                         VarSymbol superField = null;
-                                        for(Symbol sym : ext.getEnclosedElements()){
+                                        for(var sym : ext.getEnclosedElements()){
                                             if(sym.getKind() == FIELD && name(sym).equals(var)) superField = (VarSymbol)sym;
                                         }
 
                                         if(superField != null){
                                             MethodSymbol targetMethod = null;
-                                            for(Symbol sym : ext.getEnclosedElements()){
+                                            for(var sym : ext.getEnclosedElements()){
                                                 if(sym.getKind() == METHOD && name(sym).equals(var)){
-                                                    MethodSymbol msym = (MethodSymbol)sym;
+                                                    var msym = (MethodSymbol)sym;
                                                     if(spec(msym.getReturnType()).equals(result.returnType)) targetMethod = msym;
                                                 }
                                             }
@@ -951,30 +935,32 @@ public class EntityProcessor extends BaseProcessor{
                     write(def.builder, imports);
                 }
 
-                for(TypeSpec.Builder base : baseClasses.values()){
+                for(var base : baseClasses.values()){
                     imports.clear();
-                    for(ClassSymbol dep : baseDependencies.get(comp(Reflect.get(base, "name") + "Comp"))) imports.addAll(this.imports.get(dep));
+                    for(var dep : baseDependencies.get(comp(Reflect.get(base, "name") + "Comp"))) imports.addAll(this.imports.get(dep));
 
                     write(base, imports);
                 }
 
                 write(registry.addMethod(register.build()), null);
             }
+
+            default -> throw new IllegalStateException("Unknown round: " + round);
         }
     }
 
     protected void append(MethodSpec.Builder methBuilder, Iterable<ClassSymbol> defComps, Seq<MethodSymbol> entries, Seq<MethodSymbol> inserts, Seq<MethodSymbol> wraps, boolean writeBlock, VarSymbol setter){
         boolean hasSet = false;
-        for(MethodSymbol m : entries){
+        for(var m : entries){
             if(!ext(m, defComps)) continue;
             if(setter != null && !hasSet && (anno(m, MethodPriority.class) == null || anno(m, MethodPriority.class).value() == 0)){
                 hasSet = true;
-                String blockName = baseName(setter.enclClass()).toLowerCase();
-                Seq<MethodSymbol> wrapComp = tmpMethods.selectFrom(wraps, e -> baseName(comp(type(anno(e, Wrap.class)::block))).toLowerCase().equals(blockName));
+                var blockName = baseName(setter.enclClass()).toLowerCase();
+                var wrapComp = tmpMethods.selectFrom(wraps, e -> baseName(comp(type(anno(e, Wrap.class)::block))).toLowerCase().equals(blockName));
 
                 boolean wrapped = !wrapComp.isEmpty();
                 if(wrapped){
-                    StringBuilder format = new StringBuilder("if(this.$L()");
+                    var format = new StringBuilder("if(this.$L()");
                     tmpArgs.clear().add(name(wrapComp.first()));
 
                     for(int i = 1; i < wrapComp.size; i++){
@@ -985,8 +971,8 @@ public class EntityProcessor extends BaseProcessor{
                     methBuilder.beginControlFlow(format.append(")").toString(), tmpArgs.toArray());
                 }
 
-                Seq<MethodSymbol> insertComp = tmpMethods.selectFrom(inserts, e -> baseName(comp(type(anno(e, Insert.class)::block))).toLowerCase().equals(blockName));
-                for(MethodSymbol e : insertComp) if(!anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+                var insertComp = tmpMethods.selectFrom(inserts, e -> baseName(comp(type(anno(e, Insert.class)::block))).toLowerCase().equals(blockName));
+                for(var e : insertComp) if(!anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
 
                 if(!isAny(m, ABSTRACT, NATIVE)){
                     if(writeBlock) methBuilder.beginControlFlow("$L:", blockName);
@@ -994,16 +980,16 @@ public class EntityProcessor extends BaseProcessor{
                     if(writeBlock) methBuilder.endControlFlow();
                 }
 
-                for(MethodSymbol e : insertComp) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+                for(var e : insertComp) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
                 if(wrapped) methBuilder.endControlFlow();
             }
 
-            String blockName = baseName(m.enclClass()).toLowerCase();
-            Seq<MethodSymbol> wrapComp = tmpMethods.selectFrom(wraps, e -> baseName(comp(type(anno(e, Wrap.class)::block))).toLowerCase().equals(blockName));
+            var blockName = baseName(m.enclClass()).toLowerCase();
+            var wrapComp = tmpMethods.selectFrom(wraps, e -> baseName(comp(type(anno(e, Wrap.class)::block))).toLowerCase().equals(blockName));
 
             boolean wrapped = !wrapComp.isEmpty();
             if(wrapped){
-                StringBuilder format = new StringBuilder("if(this.$L()");
+                var format = new StringBuilder("if(this.$L()");
                 tmpArgs.clear().add(name(wrapComp.first()));
 
                 for(int i = 1; i < wrapComp.size; i++){
@@ -1014,12 +1000,12 @@ public class EntityProcessor extends BaseProcessor{
                 methBuilder.beginControlFlow(format.append(")").toString(), tmpArgs.toArray());
             }
 
-            Seq<MethodSymbol> insertComp = tmpMethods.selectFrom(inserts, e -> baseName(comp(type(anno(e, Insert.class)::block))).toLowerCase().equals(blockName));
-            for(MethodSymbol e : insertComp) if(!anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+            var insertComp = tmpMethods.selectFrom(inserts, e -> baseName(comp(type(anno(e, Insert.class)::block))).toLowerCase().equals(blockName));
+            for(var e : insertComp) if(!anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
 
-            String desc = desc(m);
+            var desc = desc(m);
             if(!isAny(m, ABSTRACT, NATIVE) && methodBlocks.containsKey(desc)){
-                String block = str(methodBlocks.get(desc), (writeBlock && anno(m, BreakAll.class) == null) ? blockName : null);
+                var block = str(methodBlocks.get(desc), (writeBlock && anno(m, BreakAll.class) == null) ? blockName : null);
                 if(!block.replace("\n", "").replaceAll("\\s+", "").isEmpty()){
                     if(writeBlock) methBuilder.beginControlFlow("$L:", blockName);
                     methBuilder.addCode(block);
@@ -1027,13 +1013,13 @@ public class EntityProcessor extends BaseProcessor{
                 }
             }
 
-            for(MethodSymbol e : insertComp) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
+            for(var e : insertComp) if(anno(e, Insert.class).after()) methBuilder.addStatement("this.$L()", name(e));
             if(wrapped) methBuilder.endControlFlow();
         }
     }
 
     protected String str(JCBlock block, String blockName){
-        StringWriter writer = new StringWriter();
+        var writer = new StringWriter();
         try{
             (blockName == null ? new Pretty(writer, true) : new Pretty(writer, true){
                 int innerLevel;
@@ -1061,7 +1047,9 @@ public class EntityProcessor extends BaseProcessor{
                             print("break ");
                             print(blockName);
                             print(";");
-                        }catch(IOException ignored){}
+                        }catch(IOException e){
+                            throw new UncheckedIOException(e);
+                        }
                     }
                 }
             }).printStats(block.stats);
@@ -1074,20 +1062,20 @@ public class EntityProcessor extends BaseProcessor{
     }
 
     protected boolean ext(ExecutableElement e, Iterable<ClassSymbol> defComps){
-        Extend ext = anno(e, Extend.class);
+        var ext = anno(e, Extend.class);
         if(ext == null) return true;
 
         if(ext.any()){
-            for(ClassSymbol target : types(ext::value)){
-                ClassSymbol comp = comp(target);
-                for(ClassSymbol def : defComps) if(comp == def) return true;
+            for(var target : types(ext::value)){
+                var comp = comp(target);
+                for(var def : defComps) if(comp == def) return true;
             }
             return false;
         }else{
             search:
-            for(ClassSymbol target : types(ext::value)){
-                ClassSymbol comp = comp(target);
-                for(ClassSymbol def : defComps) if(comp == def) continue search;
+            for(var target : types(ext::value)){
+                var comp = comp(target);
+                for(var def : defComps) if(comp == def) continue search;
 
                 return false;
             }
@@ -1100,7 +1088,7 @@ public class EntityProcessor extends BaseProcessor{
     }
 
     protected ClassSymbol comp(ClassSymbol inter){
-        String name = name(inter);
+        var name = name(inter);
         if(!name.endsWith("c")) return null;
 
         return comp(compName(name));
@@ -1111,7 +1099,7 @@ public class EntityProcessor extends BaseProcessor{
     }
 
     protected ClassSymbol inter(ClassSymbol comp){
-        String name = name(comp);
+        var name = name(comp);
         if(!name.endsWith("Comp")) return null;
 
         return inter(intName(name));
@@ -1134,12 +1122,20 @@ public class EntityProcessor extends BaseProcessor{
     }
 
     protected String baseName(String compName){
-        if(!compName.endsWith("Comp")) throw err("All types annotated with @EntityComponent must have 'Comp' as the name's suffix: '" + compName + "'.");
+        if(!compName.endsWith("Comp")){
+            err("All types annotated with @EntityComponent must have 'Comp' as the name's suffix: '" + compName + "'.");
+            return compName;
+        }
+
         return compName.substring(0, compName.length() - 4);
     }
 
     protected String compName(String intName){
-        if(!intName.endsWith("c")) throw err("Interface names must end with 'c': '" + intName + "'.");
+        if(!intName.endsWith("c")){
+            err("Interface names must end with 'c': '" + intName + "'.");
+            return intName;
+        }
+
         return intName.substring(0, intName.length() - 1) + "Comp";
     }
 
@@ -1150,16 +1146,16 @@ public class EntityProcessor extends BaseProcessor{
     protected Seq<ClassSymbol> dependencies(ClassSymbol comp){
         if(!dependencies.containsKey(comp)){
             ObjectSet<ClassSymbol> out = new ObjectSet<>();
-            for(Type type : comp.getInterfaces()){
-                String name = name(type.tsym);
+            for(var type : comp.getInterfaces()){
+                var name = name(type.tsym);
                 if(name.endsWith("c")){
-                    ClassSymbol dep = comp(compName(name));
+                    var dep = comp(compName(name));
                     if(dep != null && dep != comp) out.add(dep);
                 }
             }
 
             ObjectSet<ClassSymbol> result = new ObjectSet<>();
-            for(ClassSymbol type : out){
+            for(var type : out){
                 result.add(type);
                 result.addAll(dependencies(type));
             }
@@ -1179,9 +1175,9 @@ public class EntityProcessor extends BaseProcessor{
     }
 
     protected String createName(OrderedMap<String, ClassSymbol> comps){
-        Seq<String> keys = comps.orderedKeys();
+        var keys = comps.orderedKeys();
 
-        StringBuilder builder = new StringBuilder();
+        var builder = new StringBuilder();
         for(int i = keys.size - 1; i >= 0; i--) builder.append(baseName(comps.get(keys.get(i))));
 
         return builder.toString();
