@@ -735,7 +735,7 @@ public class EntityProcessor extends BaseProcessor{
                     )
                     .addField(
                         FieldSpec.builder(
-                            paramSpec(spec(ObjectMap.class), spec(String.class), paramSpec(spec(Prov.class), subSpec(spec(Object.class)))),
+                            paramSpec(spec(ObjectMap.class), spec(String.class), paramSpec(spec(Prov.class), subSpec(spec(Entityc.class)))),
                             "map",
                             PRIVATE, STATIC, FINAL
                         )
@@ -744,7 +744,7 @@ public class EntityProcessor extends BaseProcessor{
                     )
                     .addField(
                         FieldSpec.builder(
-                            paramSpec(spec(ObjectIntMap.class), paramSpec(spec(Class.class), subSpec(spec(Object.class)))),
+                            paramSpec(spec(ObjectIntMap.class), paramSpec(spec(Class.class), subSpec(spec(Entityc.class)))),
                             "ids",
                             PRIVATE, STATIC, FINAL
                         )
@@ -760,8 +760,8 @@ public class EntityProcessor extends BaseProcessor{
                     .addMethod(
                         MethodSpec.methodBuilder("get")
                             .addModifiers(PUBLIC, STATIC)
-                            .addTypeVariable(tvSpec("T"))
-                            .returns(paramSpec(spec(Prov.class), subSpec(tvSpec("T"))))
+                            .addTypeVariable(tvSpec("T", spec(Entityc.class)))
+                            .returns(paramSpec(spec(Prov.class), tvSpec("T")))
                             .addParameter(paramSpec(spec(Class.class), tvSpec("T")), "type")
                             .addStatement("return get(type.getCanonicalName())")
                         .build()
@@ -769,24 +769,24 @@ public class EntityProcessor extends BaseProcessor{
                     .addMethod(
                         MethodSpec.methodBuilder("get")
                             .addModifiers(PUBLIC, STATIC)
-                            .addTypeVariable(tvSpec("T"))
-                            .returns(paramSpec(spec(Prov.class), subSpec(tvSpec("T"))))
+                            .addTypeVariable(tvSpec("T", spec(Entityc.class)))
+                            .returns(paramSpec(spec(Prov.class), tvSpec("T")))
                             .addParameter(spec(String.class), "name")
-                            .addStatement("return ($T)map.get(name)", paramSpec(spec(Prov.class), subSpec(tvSpec("T"))))
+                            .addStatement("return ($T)map.get(name)", paramSpec(spec(Prov.class), tvSpec("T")))
                         .build()
                     )
                     .addMethod(
                         MethodSpec.methodBuilder("getID")
                             .addModifiers(PUBLIC, STATIC)
                             .returns(TypeName.INT)
-                            .addParameter(paramSpec(spec(Class.class), subSpec(spec(Object.class))), "type")
+                            .addParameter(paramSpec(spec(Class.class), subSpec(spec(Entityc.class))), "type")
                             .addStatement("return ids.get(type, -1)")
                         .build()
                     )
                     .addMethod(
                         MethodSpec.methodBuilder("register")
                             .addModifiers(PUBLIC, STATIC)
-                            .addTypeVariable(tvSpec("T"))
+                            .addTypeVariable(tvSpec("T", spec(Entityc.class)))
                             .returns(TypeName.VOID)
                             .addParameter(spec(String.class), "name")
                             .addParameter(paramSpec(spec(Class.class), tvSpec("T")), "type")
@@ -799,7 +799,7 @@ public class EntityProcessor extends BaseProcessor{
                         MethodSpec.methodBuilder("content")
                             .addModifiers(PUBLIC, STATIC)
                             .addTypeVariable(tvSpec("T"))
-                            .addTypeVariable(tvSpec("E"))
+                            .addTypeVariable(tvSpec("E", spec(Entityc.class)))
                             .returns(tvSpec("T"))
                             .addParameter(spec(String.class), "name")
                             .addParameter(paramSpec(spec(Class.class), tvSpec("E")), "type")

@@ -44,11 +44,8 @@ public class EntityAnnoPlugin implements Plugin<Project>{
 
         var fetchDir = project.getLayout().getBuildDirectory().dir("fetched");
         var fetchComps = tasks.create("fetchComps", t -> {
+            t.getInputs().property("version", project.provider(ext.getMindustryVersion()::get));
             t.getOutputs().dir(fetchDir);
-            t.getOutputs().upToDateWhen(tt -> {
-                var cache = new Fi(fetchDir.get().file("cache.txt").getAsFile());
-                return cache.exists() && cache.readString("UTF-8").equals(ext.getMindustryVersion().get());
-            });
 
             t.doFirst(tt -> {
                 var dir = fetchDir.get();
@@ -79,10 +76,19 @@ public class EntityAnnoPlugin implements Plugin<Project>{
                             fetches.addLast(exec.submit(() -> Http.get(val.getString("download_url"))
                                 .timeout(0)
                                 .error(e -> { throw new RuntimeException(e); })
-                                .block(comp -> loc
-                                    .child(val.getString("name"))
-                                    .writeString(procComp(comp.getResultAsString(), fetchPackage), false)
-                                )
+                                .block(comp -> {
+                                    var result = comp.getResultAsString();
+                                    var name = val.getString("name");
+
+                                    // Sanity checks, because this tends to happen to me.
+                                    if(result.trim().replaceAll("\\s+", "").isEmpty()){
+                                        throw new IllegalStateException("Couldn't write `" + name + "`, got an empty string; re-check your connection.");
+                                    }
+
+                                    loc
+                                        .child(name)
+                                        .writeString(procComp(result, fetchPackage), false);
+                                })
                             ));
                         }
 
@@ -99,8 +105,6 @@ public class EntityAnnoPlugin implements Plugin<Project>{
                 }
 
                 if(remaining[0] != 0) throw new IllegalStateException("Couldn't write all components; found " + remaining[0] + " unwritten.");
-                new Fi(fetchDir.get().file("cache.txt").getAsFile()).writeString(version, false, "UTF-8");
-
                 project.getLogger().lifecycle("Wrote {} components.", remaining[1]);
             });
         });
