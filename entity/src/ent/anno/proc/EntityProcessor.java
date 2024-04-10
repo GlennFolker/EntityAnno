@@ -447,7 +447,7 @@ public class EntityProcessor extends BaseProcessor{
                         );
                     }
 
-                    var io = new EntityIO(this, name, builder, allFieldSpecs, serializer, revDir.child(name));
+                    EntityIO io = null;
                     boolean hasIO = defAnno.genIO() && (isSync || defAnno.serialize());
 
                     boolean serializeOverride = false;
@@ -633,6 +633,7 @@ public class EntityProcessor extends BaseProcessor{
                         syncedFields.sortComparing(BaseProcessor::name);
 
                         if(hasIO){
+                            if(io == null) io = new EntityIO(this, name, builder, allFieldSpecs, serializer, revDir.child(name));
                             if((mname.equals("read") || mname.equals("write"))){
                                 io.write(methBuilder, mname.equals("write"));
                             }

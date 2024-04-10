@@ -31,7 +31,7 @@ allprojects{
     apply(plugin = "maven-publish")
 
     sourceSets["main"].java.setSrcDirs(arrayListOf(layout.projectDirectory.dir("src")))
-    version = "v146.0.4"
+    version = "v146.0.5"
 
     repositories{
         google()
