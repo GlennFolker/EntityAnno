@@ -88,7 +88,7 @@ configure(allprojects - project(":downgrader")){
 configure(arrayListOf(project(":downgrader"), project(":entity"))){
     sourceSets["main"].resources.setSrcDirs(arrayListOf(layout.projectDirectory.dir("assets")))
 
-    group = "com.github.GlennFolker.EntityAnno"
+    group = "com.github.Glenn.EntityAnno"
     publishing.publications.register<MavenPublication>("maven"){
         from(components["java"])
     }
@@ -108,7 +108,7 @@ project(":entity"){
 project(":"){
     apply(plugin = "java-gradle-plugin")
 
-    group = "com.github.Folker"
+    group = "com.github.GlennFolker"
     configure<GradlePluginDevelopmentExtension>{
         plugins.register("entityAnno"){
             id = "com.github.GlennFolker.EntityAnno"
