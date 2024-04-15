@@ -88,7 +88,7 @@ configure(allprojects - project(":downgrader")){
 configure(arrayListOf(project(":downgrader"), project(":entity"))){
     sourceSets["main"].resources.setSrcDirs(arrayListOf(layout.projectDirectory.dir("assets")))
 
-    group = "com.github.Glenn.EntityAnno"
+    group = "com.github.GlennFolker.EntityAnno"
     publishing.publications.register<MavenPublication>("maven"){
         from(components["java"])
     }
