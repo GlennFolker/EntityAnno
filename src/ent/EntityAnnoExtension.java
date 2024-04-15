@@ -6,7 +6,7 @@ import java.io.*;
 
 /**
  * Necessary extension data for {@link EntityAnnoPlugin}.
- * @author GlennFolker
+ * @author GlFolker
  */
 public interface EntityAnnoExtension{
     /** @return The mod's internal name. */

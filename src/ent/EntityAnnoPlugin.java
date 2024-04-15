@@ -18,7 +18,7 @@ import java.util.concurrent.*;
 
 /**
  * Gradle plugin for creating necessary entity component generation classes.
- * @author GlennFolker
+ * @author GlFolker
  */
 public class EntityAnnoPlugin implements Plugin<Project>{
     public static final String defMindustryVersion = "v146";

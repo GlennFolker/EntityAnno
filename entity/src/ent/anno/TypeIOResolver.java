@@ -15,7 +15,7 @@ import static javax.lang.model.element.Modifier.*;
 import static javax.lang.model.type.TypeKind.*;
 
 /**
- * @author GlennFolker
+ * @author GlFolker
  * @author Anuke
  */
 public class TypeIOResolver{

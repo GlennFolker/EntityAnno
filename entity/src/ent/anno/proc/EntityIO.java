@@ -18,7 +18,7 @@ import static javax.lang.model.element.Modifier.*;
 
 /**
  * @author Anuke
- * @author GlennFolker
+ * @author GlFolker
  */
 public class EntityIO{
     public static final Json json = new Json();

@@ -4,7 +4,7 @@ import java.lang.annotation.*;
 
 /**
  * Source-level annotations to generate entity classes from components.
- * @author GlennFolker
+ * @author GlFolker
  * @author Anuke
  */
 public final class Annotations{

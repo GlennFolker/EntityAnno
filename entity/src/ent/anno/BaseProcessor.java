@@ -26,7 +26,7 @@ import java.util.*;
 import java.util.regex.*;
 
 /**
- * @author GlennFolker
+ * @author GlFolker
  * @author Anuke
  */
 @SuppressWarnings("unchecked")

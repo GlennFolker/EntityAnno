@@ -28,7 +28,7 @@ import static javax.lang.model.element.Modifier.*;
 import static javax.lang.model.type.TypeKind.*;
 
 /**
- * @author GlennFolker
+ * @author GlFolker
  * @author Anuke
  */
 public class EntityProcessor extends BaseProcessor{
@@ -91,10 +91,24 @@ public class EntityProcessor extends BaseProcessor{
                 for(var t : this.<ClassSymbol>with(EntityComponent.class)) comps.put(name(t), t);
                 for(var t : this.<ClassSymbol>with(EntityBaseComponent.class)) baseComps.add(t);
                 for(var s : with(EntityDef.class)) defs.add(s);
-                for(var s : this.<ClassSymbol>with(EntityPoint.class)) pointers.add(s);
+
+                pointer:
+                for(var t : this.<ClassSymbol>with(EntityPoint.class)){
+                    for(var s : t.getEnclosedElements()){
+                        if(s.getKind() == METHOD){
+                            var m = (MethodSymbol)s;
+                            if(is(m, PUBLIC, STATIC) && m.params.isEmpty() && same(m.getReturnType(), t)){
+                                pointers.add(t);
+                                continue pointer;
+                            }
+                        }
+                    }
+
+                    err("Missing `public static " + name(t) + " create()`", t);
+                }
 
                 for(var e : this.<MethodSymbol>with(Insert.class)){
-                    if(!e.params.isEmpty()) err("All @Insert methods must not have parameters");
+                    if(!e.params.isEmpty()) err("All @Insert methods must not have parameters", e);
 
                     var type = comps.get(name(e.enclClass()));
                     if(type == null) continue;
@@ -107,8 +121,8 @@ public class EntityProcessor extends BaseProcessor{
                 }
 
                 for(var e : this.<MethodSymbol>with(Wrap.class)){
-                    if(!e.params.isEmpty()) err("All @Wrap methods must not have parameters");
-                    if(e.getReturnType().getKind() != BOOLEAN) err("All @Wrap methods must have boolean return type");
+                    if(!e.params.isEmpty()) err("All @Wrap methods must not have parameters", e);
+                    if(e.getReturnType().getKind() != BOOLEAN) err("All @Wrap methods must have boolean return type", e);
 
                     var type = comps.get(name(e.enclClass()));
                     if(type == null) continue;
@@ -320,7 +334,7 @@ public class EntityProcessor extends BaseProcessor{
                             if(baseClassType == null){
                                 baseClassType = comp;
                             }else{
-                                err("Can't have more than one base classes.", def);
+                                err("Can't have more than one base classes", def);
                                 break;
                             }
                         }
@@ -386,7 +400,7 @@ public class EntityProcessor extends BaseProcessor{
 
                                 var fname = name(v);
                                 if(!usedFields.add(fname)){
-                                    err("Duplicate field names: '" + fname + "'.", def);
+                                    err("Duplicate field names: `" + fname + "`.", v);
                                     continue;
                                 }
 
@@ -421,7 +435,7 @@ public class EntityProcessor extends BaseProcessor{
 
                                 if(isSync && anno(v, SyncField.class) != null){
                                     if(v.type.getKind() != FLOAT){
-                                        err("All @SyncFields must be float.", def);
+                                        err("All @SyncFields must be float.", v);
                                         continue;
                                     }
 
@@ -462,6 +476,17 @@ public class EntityProcessor extends BaseProcessor{
                                 first.getParameters().size() == 1 && same(first.getParameters().get(0).type, v.type) &&
                                 first.getReturnType().getKind() == VOID;
                         });
+
+                        if(setter != null){
+                            var c = setter.enclClass();
+                            var n = name(setter);
+                            for(var m : entries){
+                                if(m.enclClass() == c && n.equals(name(m)) && m.getReturnType().getKind() == VOID && m.params.size() == 1 && same(m.params.get(0).type, setter.type)){
+                                    setter = null;
+                                    break;
+                                }
+                            }
+                        }
 
                         var topReplacer = entries.max(m -> {
                             var rep = anno(m, Replace.class);
