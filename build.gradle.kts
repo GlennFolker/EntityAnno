@@ -30,8 +30,10 @@ allprojects{
     apply(plugin = "java")
     apply(plugin = "maven-publish")
 
-    sourceSets["main"].java.setSrcDirs(arrayListOf(layout.projectDirectory.dir("src")))
-    version = "v146.0.7"
+    sourceSets["main"].java.setSrcDirs(listOf(layout.projectDirectory.dir("src")))
+
+    group = "com.github.GlennFolker.EntityAnno"
+    version = "v146.0.9"
 
     repositories{
         google()
@@ -77,6 +79,14 @@ allprojects{
             optionFiles(opts)
         }
     }
+
+    publishing.repositories.maven{
+        url = uri("https://maven.pkg.github.com/GlennFolker/EntityAnno")
+        credentials {
+            username = System.getenv("GITHUB_USERNAME")
+            password = System.getenv("GITHUB_TOKEN")
+        }
+    }
 }
 
 configure(allprojects - project(":downgrader")){
@@ -85,10 +95,8 @@ configure(allprojects - project(":downgrader")){
     }
 }
 
-configure(arrayListOf(project(":downgrader"), project(":entity"))){
-    sourceSets["main"].resources.setSrcDirs(arrayListOf(layout.projectDirectory.dir("assets")))
-
-    group = "com.github.GlennFolker.EntityAnno"
+configure(listOf(project(":downgrader"), project(":entity"))){
+    sourceSets["main"].resources.setSrcDirs(listOf(layout.projectDirectory.dir("assets")))
     publishing.publications.register<MavenPublication>("maven"){
         from(components["java"])
     }
@@ -107,8 +115,6 @@ project(":entity"){
 
 project(":"){
     apply(plugin = "java-gradle-plugin")
-
-    group = "com.github.GlennFolker"
     configure<GradlePluginDevelopmentExtension>{
         plugins.register("entityAnno"){
             id = "com.github.GlennFolker.EntityAnno"

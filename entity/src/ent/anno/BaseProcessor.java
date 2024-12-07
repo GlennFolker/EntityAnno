@@ -93,10 +93,10 @@ public abstract class BaseProcessor implements Processor{
                 process();
             }
         }catch(Throwable e){
-            e = Strings.getFinalCause(e);
+            var finalCause = Strings.getFinalCause(e);
 
-            Log.err(e);
-            throw new RuntimeException(e);
+            Log.err(finalCause);
+            throw new RuntimeException(finalCause);
         }
 
         if(roundEnv.processingOver()) Log.info("Time taken for @: @s", getClass().getSimpleName(), (Time.millis() - initTime) / 1000f);

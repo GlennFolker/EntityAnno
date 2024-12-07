@@ -2,13 +2,9 @@ package ent.anno;
 
 import arc.struct.*;
 import arc.util.io.*;
-import com.sun.tools.javac.code.*;
 import com.sun.tools.javac.code.Symbol.*;
-import com.sun.tools.javac.util.*;
 import ent.anno.Annotations.*;
 import mindustry.io.*;
-
-import javax.lang.model.element.*;
 
 import static ent.anno.BaseProcessor.*;
 import static javax.lang.model.element.Modifier.*;

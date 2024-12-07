@@ -1,6 +1,2 @@
-before_install:
-  - sdk install java 21.0.1-tem
-  - sdk use java 21.0.1-tem
-install:
-  - ./gradlew publishToMavenLocal
-  - echo -n > gradle.properties
+build:
+  skip: true
