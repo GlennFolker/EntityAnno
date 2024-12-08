@@ -32,9 +32,6 @@ allprojects{
 
     sourceSets["main"].java.setSrcDirs(listOf(layout.projectDirectory.dir("src")))
 
-    group = "com.github.GlennFolker.EntityAnno"
-    version = "v146.0.9"
-
     repositories{
         google()
         mavenCentral()
@@ -80,6 +77,7 @@ allprojects{
         }
     }
 
+    group = "com.github.GlennFolker.EntityAnno"
     publishing.repositories.maven{
         url = uri("https://maven.pkg.github.com/GlennFolker/EntityAnno")
         credentials {
