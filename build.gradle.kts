@@ -77,7 +77,6 @@ allprojects{
         }
     }
 
-    group = "com.github.GlennFolker.EntityAnno"
     publishing.repositories.maven{
         url = uri("https://maven.pkg.github.com/GlennFolker/EntityAnno")
         credentials {
@@ -95,6 +94,8 @@ configure(allprojects - project(":downgrader")){
 
 configure(listOf(project(":downgrader"), project(":entity"))){
     sourceSets["main"].resources.setSrcDirs(listOf(layout.projectDirectory.dir("assets")))
+
+    group = "com.github.GlennFolker.EntityAnno"
     publishing.publications.register<MavenPublication>("maven"){
         from(components["java"])
     }
@@ -113,6 +114,8 @@ project(":entity"){
 
 project(":"){
     apply(plugin = "java-gradle-plugin")
+
+    group = "com.github.GlennFolker"
     configure<GradlePluginDevelopmentExtension>{
         plugins.register("entityAnno"){
             id = "com.github.GlennFolker.EntityAnno"
