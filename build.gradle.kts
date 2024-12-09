@@ -76,14 +76,6 @@ allprojects{
             optionFiles(opts)
         }
     }
-
-    publishing.repositories.maven{
-        url = uri("https://maven.pkg.github.com/GlennFolker/EntityAnno")
-        credentials {
-            username = System.getenv("GITHUB_USERNAME")
-            password = System.getenv("GITHUB_TOKEN")
-        }
-    }
 }
 
 configure(allprojects - project(":downgrader")){

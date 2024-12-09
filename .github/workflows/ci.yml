@@ -1,9 +1,17 @@
-name: Push Test
+name: Deployment
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
 
 jobs:
-  compile:
+  publish:
     runs-on: ubuntu-latest
 
     steps:
@@ -15,7 +23,29 @@ jobs:
         distribution: temurin
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
-    - name: Compile project
+    - name: Set Artifact Version
       run: |
+        if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+          # This is a release, so use the release's tag as the version.
+          echo "ARTIFACT_VERSION=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+        elif [ "${GITHUB_REF_TYPE}" = "branch" ] && [ "${GITHUB_REF_NAME}" = "main" ]; then
+          # This is a bleeding-edge, so use the short commit's hash as the version.
+          echo "ARTIFACT_VERSION=$(git rev-parse --short=10 HEAD)" >> $GITHUB_ENV
+        else
+          # Sanity checks.
+          echo "Error: Unsupported branch '${GITHUB_REF_NAME}' or ref type '${GITHUB_REF_TYPE}'" >&2
+          exit 1
+        fi
+    - name: Publish Artifacts
+      run: |
+        git clone https://${{ secrets.MAVEN_TOKEN_GITHUB }}@github.com/GlennFolker/EntityAnnoMaven.git --depth=1 --no-checkout ../.out
+        
         chmod +x gradlew
-        ./gradlew jar
+        ./gradlew -P version="${ARTIFACT_VERSION}" -D maven.repo.local="$(pwd)/../.out" publishToMavenLocal
+        
+        cd ../.out
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add .
+        git commit -m "Publishing for ${ARTIFACT_VERSION}"
+        git push https://${{ secrets.MAVEN_TOKEN_GITHUB }}@github.com/GlennFolker/EntityAnnoMaven.git
