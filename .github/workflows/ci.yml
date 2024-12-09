@@ -38,16 +38,15 @@ jobs:
         fi
     - name: Publish Artifacts
       run: |
-        git clone https://${{ secrets.MAVEN_TOKEN_GITHUB }}@github.com/GlennFolker/EntityAnnoMaven.git --depth=1 --no-checkout ../.out
-        
         chmod +x gradlew
-        ./gradlew -P version="${ARTIFACT_VERSION}" -D maven.repo.local="$(pwd)/../.out" publishToMavenLocal
+        ./gradlew -P version="${ARTIFACT_VERSION}" -D maven.repo.local="$(pwd)/.out" publishToMavenLocal
         
-        cd ../.out
+        git clone https://${{ secrets.MAVEN_TOKEN_GITHUB }}@github.com/GlennFolker/EntityAnnoMaven.git --depth=1 ../EntityAnnoMaven
+        cp -r .out/* ../EntityAnnoMaven
+        cd ../EntityAnnoMaven
+        
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
         git add .
         git commit -m "Publishing for ${ARTIFACT_VERSION}"
-        git fetch origin
-        git merge origin --no-ff
         git push https://${{ secrets.MAVEN_TOKEN_GITHUB }}@github.com/GlennFolker/EntityAnnoMaven.git
