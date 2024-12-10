@@ -13,6 +13,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    if: ${{ github.repository == 'GlennFolker/EntityAnno' }}
 
     steps:
     - uses: actions/checkout@v4

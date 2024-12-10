@@ -63,7 +63,7 @@ allprojects{
         maven("https://jitpack.io")
     }
 
-    configure<JavaPluginExtension>{
+    java{
         withJavadocJar()
         withSourcesJar()
     }
